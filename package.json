@@ -1,0 +1,26 @@
+{
+  "name": "ielts-daily",
+  "version": "1.0.0",
+  "description": "Daily IELTS reading practice emails",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && RUN_NOW=true node dist/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
+    "@extractus/article-extractor": "^8.0.20",
+    "node-cron": "^4.2.1",
+    "resend": "^6.9.4",
+    "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/node-cron": "^3.0.11",
+    "typescript": "^6.0.2"
+  }
+}

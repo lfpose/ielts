@@ -1,0 +1,12 @@
+app = "ielts-daily"
+primary_region = "scl"
+
+[build]
+
+[env]
+  NODE_ENV = "production"
+
+# No HTTP services needed — this is a background worker
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
