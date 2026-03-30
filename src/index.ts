@@ -1,15 +1,25 @@
 import cron from "node-cron";
+import { serve } from "@hono/node-server";
 import { fetchRandomArticle } from "./services/article.js";
 import { generateQuestions } from "./services/questions.js";
 import { sendIELTSEmail } from "./services/email.js";
+import { logEmailStart, logEmailSuccess, logEmailError } from "./db.js";
+import dashboard from "./dashboard.js";
 
-async function runDailyJob() {
+const RECIPIENTS = (process.env.RECIPIENTS || "").split(",").filter(Boolean);
+
+export async function runDailyJob() {
+  const start = Date.now();
   console.log(`[${new Date().toISOString()}] Starting daily IELTS email job...`);
+
+  let logId: number | undefined;
 
   try {
     console.log("Fetching article...");
     const article = await fetchRandomArticle();
     console.log(`Article: "${article.title}" from ${article.source}`);
+
+    logId = logEmailStart(article.title, article.source, article.url, RECIPIENTS.join(", "));
 
     console.log("Generating IELTS questions...");
     const ielts = await generateQuestions(article);
@@ -17,18 +27,28 @@ async function runDailyJob() {
     console.log("Sending email...");
     await sendIELTSEmail(article, ielts);
 
-    console.log("Done! Email sent successfully.");
+    const duration = Date.now() - start;
+    if (logId) logEmailSuccess(logId, duration);
+    console.log(`Done! Email sent in ${(duration / 1000).toFixed(1)}s`);
   } catch (err) {
+    const duration = Date.now() - start;
+    const errMsg = err instanceof Error ? err.message : String(err);
+    if (logId) logEmailError(logId, errMsg, duration);
     console.error("Job failed:", err);
   }
 }
 
-// Run daily at 7:00 AM UTC (adjust as needed)
+// Cron: daily at 7:00 AM UTC
 cron.schedule("0 7 * * *", runDailyJob);
+console.log("IELTS Daily Email scheduler started. Cron: 7:00 AM UTC.");
 
-console.log("IELTS Daily Email scheduler started. Waiting for 7:00 AM UTC...");
+// Web dashboard
+const port = Number(process.env.PORT) || 8080;
+serve({ fetch: dashboard.fetch, port }, () => {
+  console.log(`Dashboard running on http://localhost:${port}`);
+});
 
-// Also allow manual trigger via env var
+// Manual trigger via env var (for testing)
 if (process.env.RUN_NOW === "true") {
   runDailyJob();
 }
