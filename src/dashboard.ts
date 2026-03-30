@@ -106,19 +106,19 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function statusDot(status: string): string {
-  const colors: Record<string, string> = {
-    success: "#4A5899",
-    error: "#C47A5A",
-    pending: "#B0A898",
-    sent: "#4A5899",
-  };
-  const color = colors[status] || "#B0A898";
-  return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:${color};">
-    <span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block;"></span>
-    ${status}
-  </span>`;
+function statusBadge(status: string): string {
+  if (status === "success" || status === "sent")
+    return `<span class="badge">DELIVERED</span>`;
+  if (status === "error")
+    return `<span class="badge badge-red">FAILED</span>`;
+  return `<span class="badge badge-muted">PENDING</span>`;
 }
+
+const today = () => {
+  const d = new Date();
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+};
 
 function renderDashboard(
   stats: { total: number; success: number; error: number; pending: number },
@@ -130,15 +130,15 @@ function renderDashboard(
     .map(
       (l: any) => `
     <tr>
-      <td class="td">${l.id}</td>
-      <td class="td" style="white-space:nowrap;color:var(--text-muted);">${l.sent_at}</td>
-      <td class="td" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-        <a href="${esc(l.article_url)}" target="_blank" style="color:var(--blue);text-decoration:none;border-bottom:1px solid var(--text-ghost);">${esc(l.article_title)}</a>
+      <td class="td mono">${l.id}</td>
+      <td class="td mono" style="white-space:nowrap;">${l.sent_at}</td>
+      <td class="td" style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        <a href="${esc(l.article_url)}" target="_blank">${esc(l.article_title)}</a>
       </td>
-      <td class="td" style="color:var(--text-muted);">${esc(l.article_source)}</td>
-      <td class="td">${statusDot(l.status)}</td>
-      <td class="td" style="color:var(--text-muted);">${l.duration_ms ? (l.duration_ms / 1000).toFixed(1) + "s" : "&mdash;"}</td>
-      <td class="td" style="color:var(--terra);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.error ? esc(l.error) : ""}</td>
+      <td class="td muted">${esc(l.article_source)}</td>
+      <td class="td">${statusBadge(l.status)}</td>
+      <td class="td mono">${l.duration_ms ? (l.duration_ms / 1000).toFixed(1) + "s" : "&mdash;"}</td>
+      <td class="td error-text" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.error ? esc(l.error) : ""}</td>
     </tr>`
     )
     .join("");
@@ -147,10 +147,10 @@ function renderDashboard(
     .map(
       (f: any) => `
     <tr>
-      <td class="td" style="color:var(--text-muted);">${f.received_at}</td>
+      <td class="td mono">${f.received_at}</td>
       <td class="td">${esc(f.user_email)}</td>
-      <td class="td" style="color:var(--blue);font-weight:600;font-size:16px;">${f.score ? esc(f.score) : "&mdash;"}</td>
-      <td class="td">${statusDot(f.status)}</td>
+      <td class="td score">${f.score ? esc(f.score) : "&mdash;"}</td>
+      <td class="td">${statusBadge(f.status)}</td>
     </tr>`
     )
     .join("");
@@ -162,395 +162,450 @@ function renderDashboard(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IELTS Daily</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block');
 
-    /* --- CSS Custom Properties (Light = default) --- */
     :root {
-      --bg: #F5F1EB;
-      --bg-card: #FFFFFF;
-      --bg-input: #FDFCFA;
-      --bg-hover: #FDFCFA;
-      --text: #2C2C2C;
-      --text-muted: #8A8278;
-      --text-faint: #B0A898;
-      --text-ghost: #D5CFC5;
-      --border: #EDE8E0;
-      --border-light: #F5F1EB;
-      --blue: #4A5899;
-      --blue-hover: #3A4880;
-      --terra: #C47A5A;
-      --shadow: 0 1px 3px rgba(180,170,155,0.15), 0 4px 12px rgba(180,170,155,0.08);
-      --shadow-hover: 0 4px 12px rgba(74,88,153,0.25);
-      --grain-opacity: 0.03;
+      --bg: #F9F9F7;
+      --fg: #111111;
+      --muted: #E5E5E0;
+      --red: #CC0000;
+      --n100: #F5F5F5;
+      --n400: #A3A3A3;
+      --n500: #737373;
+      --n600: #525252;
+      --n700: #404040;
     }
 
-    /* Dark mode — warm inky notebook at night */
     [data-theme="dark"] {
-      --bg: #1C1A17;
-      --bg-card: #252320;
-      --bg-input: #1C1A17;
-      --bg-hover: #2A2825;
-      --text: #D8D0C4;
-      --text-muted: #8A8278;
-      --text-faint: #5E584E;
-      --text-ghost: #3A362F;
-      --border: #33302A;
-      --border-light: #2A2825;
-      --blue: #7B8FD4;
-      --blue-hover: #6A7EC0;
-      --terra: #D4956E;
-      --shadow: 0 1px 3px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.15);
-      --shadow-hover: 0 4px 12px rgba(123,143,212,0.2);
-      --grain-opacity: 0.015;
+      --bg: #111111;
+      --fg: #E8E8E4;
+      --muted: #2A2A28;
+      --red: #FF4444;
+      --n100: #1A1A1A;
+      --n400: #666666;
+      --n500: #888888;
+      --n600: #AAAAAA;
+      --n700: #CCCCCC;
     }
 
-    /* Auto dark mode via OS preference (unless manually toggled) */
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --bg: #1C1A17;
-        --bg-card: #252320;
-        --bg-input: #1C1A17;
-        --bg-hover: #2A2825;
-        --text: #D8D0C4;
-        --text-muted: #8A8278;
-        --text-faint: #5E584E;
-        --text-ghost: #3A362F;
-        --border: #33302A;
-        --border-light: #2A2825;
-        --blue: #7B8FD4;
-        --blue-hover: #6A7EC0;
-        --terra: #D4956E;
-        --shadow: 0 1px 3px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.15);
-        --shadow-hover: 0 4px 12px rgba(123,143,212,0.2);
-        --grain-opacity: 0.015;
+        --bg: #111111;
+        --fg: #E8E8E4;
+        --muted: #2A2A28;
+        --red: #FF4444;
+        --n100: #1A1A1A;
+        --n400: #666666;
+        --n500: #888888;
+        --n600: #AAAAAA;
+        --n700: #CCCCCC;
       }
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Source Serif 4', Georgia, serif;
+      font-family: 'Lora', Georgia, serif;
       background: var(--bg);
-      color: var(--text);
+      color: var(--fg);
       min-height: 100vh;
-      background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-      transition: background 0.3s, color 0.3s;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23111111' fill-opacity='0.04' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
+      transition: background 0.2s, color 0.2s;
+    }
+
+    [data-theme="dark"] body,
+    :root:not([data-theme="light"]) body {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23ffffff' fill-opacity='0.03' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
     }
 
     .shell {
-      max-width: 960px;
+      max-width: 1080px;
       margin: 0 auto;
-      padding: 48px 32px;
+      padding: 32px 24px;
     }
 
-    /* HEADER */
-    .header {
+    /* ---- MASTHEAD ---- */
+    .masthead {
+      border-bottom: 4px double var(--fg);
+      padding-bottom: 12px;
+      margin-bottom: 8px;
+    }
+    .masthead-top {
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
-      margin-bottom: 48px;
+      align-items: baseline;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--n500);
+      margin-bottom: 16px;
+    }
+    .masthead h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 56px;
+      font-weight: 900;
+      line-height: 0.92;
+      letter-spacing: -1px;
+      text-align: center;
+      color: var(--fg);
+    }
+    .masthead .tagline {
+      text-align: center;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 5px;
+      color: var(--n500);
+      margin-top: 10px;
     }
 
-    .header h1 {
-      font-size: 32px;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: 0.5px;
-    }
-
-    .header .sub {
-      font-size: 14px;
-      color: var(--text-muted);
-      font-style: italic;
-      font-weight: 300;
-      margin-top: 4px;
-    }
-
-    .header .accent-line {
-      width: 48px;
-      height: 2px;
-      background: var(--terra);
-      margin-top: 12px;
-    }
-
-    .header-right {
+    .toolbar {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--fg);
+      margin-bottom: 24px;
+    }
+    .toolbar-left {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--n500);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .toolbar-right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
     }
 
-    .theme-toggle {
+    .btn-primary {
+      font-family: 'Inter', sans-serif;
+      background: var(--fg);
+      color: var(--bg);
+      border: 1px solid transparent;
+      padding: 10px 28px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      cursor: pointer;
+      border-radius: 0;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover {
+      background: var(--bg);
+      color: var(--fg);
+      border-color: var(--fg);
+    }
+
+    .btn-icon {
       background: none;
-      border: 1px solid var(--border);
-      color: var(--text-muted);
+      border: 1px solid var(--fg);
+      color: var(--fg);
       width: 38px;
       height: 38px;
-      border-radius: 8px;
       cursor: pointer;
-      font-size: 18px;
+      font-size: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
+      border-radius: 0;
       transition: all 0.2s;
     }
-    .theme-toggle:hover {
-      border-color: var(--text-faint);
-      color: var(--text);
+    .btn-icon:hover {
+      background: var(--fg);
+      color: var(--bg);
     }
 
-    .trigger-btn {
-      font-family: 'Source Serif 4', Georgia, serif;
-      background: var(--blue);
-      color: #FFFFFF;
-      border: none;
-      padding: 14px 32px;
-      font-size: 14px;
-      font-weight: 600;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-      letter-spacing: 0.3px;
-    }
-    .trigger-btn:hover {
-      background: var(--blue-hover);
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-hover);
-    }
-    .trigger-btn:active {
-      transform: translateY(0);
-    }
-
-    /* STATS */
-    .stats {
+    /* ---- STATS GRID ---- */
+    .stats-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
-      margin-bottom: 48px;
-    }
-
-    .stat-card {
-      background: var(--bg-card);
-      border-radius: 10px;
-      padding: 24px;
-      position: relative;
-      box-shadow: var(--shadow);
-      transition: background 0.3s, box-shadow 0.3s;
-    }
-
-    .stat-card .label {
-      font-size: 12px;
-      color: var(--text-faint);
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      font-family: 'IBM Plex Mono', monospace;
-      font-weight: 400;
-      margin-bottom: 8px;
-    }
-
-    .stat-card .val {
-      font-size: 38px;
-      font-weight: 700;
-      line-height: 1;
-    }
-
-    .c-default { color: var(--text); }
-    .c-blue { color: var(--blue); }
-    .c-terra { color: var(--terra); }
-    .c-muted { color: var(--text-faint); }
-
-    /* SECTIONS */
-    .section {
-      background: var(--bg-card);
-      border-radius: 10px;
+      border: 1px solid var(--fg);
       margin-bottom: 32px;
-      box-shadow: var(--shadow);
-      overflow: hidden;
-      transition: background 0.3s, box-shadow 0.3s;
     }
+    .stat {
+      padding: 20px;
+      border-right: 1px solid var(--fg);
+      position: relative;
+    }
+    .stat:last-child { border-right: none; }
+    .stat .label {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: var(--n500);
+      margin-bottom: 6px;
+    }
+    .stat .val {
+      font-family: 'Playfair Display', serif;
+      font-size: 42px;
+      font-weight: 900;
+      line-height: 1;
+      color: var(--fg);
+    }
+    .stat.red .val { color: var(--red); }
 
+    /* ---- SECTIONS ---- */
+    .section {
+      border: 1px solid var(--fg);
+      margin-bottom: 24px;
+      background: var(--bg);
+      border-radius: 0;
+    }
     .section-head {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 20px 28px;
-      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--fg);
+      background: var(--n100);
     }
-
     .section-head h2 {
-      font-size: 13px;
-      font-weight: 400;
-      color: var(--text-faint);
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 2px;
-      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 3px;
+      color: var(--fg);
     }
-
     .section-head .hint {
-      font-size: 12px;
-      color: var(--text-ghost);
-      font-style: italic;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--n500);
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
-    /* TABLE */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
+    /* ---- TABLE ---- */
+    table { width: 100%; border-collapse: collapse; }
     th {
       text-align: left;
-      padding: 14px 16px;
-      font-size: 11px;
-      letter-spacing: 1.5px;
+      padding: 10px 14px;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
       text-transform: uppercase;
-      color: var(--text-faint);
-      font-family: 'IBM Plex Mono', monospace;
-      font-weight: 400;
-      border-bottom: 1px solid var(--border);
+      letter-spacing: 2px;
+      color: var(--n500);
+      border-bottom: 2px solid var(--fg);
+      background: var(--n100);
     }
-
     .td {
-      padding: 14px 16px;
+      padding: 10px 14px;
       font-size: 13px;
-      border-bottom: 1px solid var(--border-light);
-      color: var(--text);
+      border-bottom: 1px solid var(--muted);
+      color: var(--fg);
+      font-family: 'Lora', serif;
     }
+    .td.mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--n500);
+    }
+    .td.muted { color: var(--n500); }
+    .td.score {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--fg);
+    }
+    .td.error-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--red);
+    }
+    .td a {
+      color: var(--fg);
+      text-decoration: none;
+      border-bottom: 1px solid var(--muted);
+      transition: border-color 0.2s;
+    }
+    .td a:hover {
+      border-bottom-color: var(--red);
+    }
+    tr:hover .td { background: var(--n100); }
 
-    tr:hover .td { background: var(--bg-hover); }
+    .badge {
+      font-family: 'Inter', sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 3px 8px;
+      border: 1px solid var(--fg);
+      color: var(--fg);
+      display: inline-block;
+    }
+    .badge-red { border-color: var(--red); color: var(--red); }
+    .badge-muted { border-color: var(--n400); color: var(--n400); }
 
     .empty-state {
       text-align: center;
-      padding: 56px 28px;
-      color: var(--text-faint);
-      font-size: 15px;
+      padding: 48px 24px;
       font-style: italic;
+      color: var(--n500);
+      font-size: 14px;
     }
 
-    /* SETTINGS */
+    /* ---- SETTINGS ---- */
     .settings-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 0;
     }
-
     .field {
-      padding: 20px 28px;
-      border-right: 1px solid var(--border-light);
-      border-bottom: 1px solid var(--border-light);
+      padding: 16px 20px;
+      border-right: 1px solid var(--muted);
+      border-bottom: 1px solid var(--muted);
     }
     .field:nth-child(even) { border-right: none; }
-
     .field label {
       display: block;
-      font-size: 11px;
-      color: var(--text-faint);
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 1.5px;
-      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 2px;
+      color: var(--n500);
       margin-bottom: 8px;
     }
-
     .field input {
       width: 100%;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-family: 'IBM Plex Mono', monospace;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid var(--fg);
+      color: var(--fg);
+      font-family: 'JetBrains Mono', monospace;
       font-size: 13px;
-      padding: 10px 14px;
-      border-radius: 6px;
+      padding: 8px 2px;
+      border-radius: 0;
       outline: none;
-      transition: border-color 0.2s, background 0.3s;
+      transition: background 0.2s;
     }
     .field input:focus {
-      border-color: var(--blue);
+      background: var(--n100);
+    }
+    .field input:disabled {
+      color: var(--n400);
+      border-bottom-style: dashed;
     }
 
     .save-row {
-      padding: 16px 28px;
+      padding: 14px 20px;
       text-align: right;
+      border-top: 1px solid var(--muted);
     }
-
-    .save-btn {
-      font-family: 'Source Serif 4', Georgia, serif;
+    .btn-outline {
+      font-family: 'Inter', sans-serif;
       background: transparent;
-      color: var(--blue);
-      border: 1px solid var(--blue);
+      color: var(--fg);
+      border: 1px solid var(--fg);
       padding: 10px 28px;
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 600;
-      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
       cursor: pointer;
+      border-radius: 0;
       transition: all 0.2s;
     }
-    .save-btn:hover {
-      background: var(--blue);
-      color: #FFFFFF;
+    .btn-outline:hover {
+      background: var(--fg);
+      color: var(--bg);
     }
 
-    .refresh {
+    /* ---- FOOTER ---- */
+    .footer-rule {
       text-align: center;
-      padding: 24px;
-      font-size: 12px;
-      color: var(--text-ghost);
-      font-style: italic;
+      padding: 32px 0 8px;
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      color: var(--n400);
+      letter-spacing: 0.8em;
     }
-    .refresh a { color: var(--text-faint); text-decoration: none; }
-    .refresh a:hover { color: var(--blue); border-bottom: 1px solid var(--blue); }
+    .footer {
+      text-align: center;
+      padding: 12px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--n500);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .footer a { color: var(--n500); text-decoration: none; }
+    .footer a:hover { color: var(--red); }
 
+    /* ---- RESPONSIVE ---- */
     @media (max-width: 768px) {
-      .shell { padding: 24px 16px; }
-      .stats { grid-template-columns: repeat(2, 1fr); }
+      .shell { padding: 16px 12px; }
+      .masthead h1 { font-size: 36px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .stat:nth-child(2) { border-right: none; }
+      .stat:nth-child(1), .stat:nth-child(2) { border-bottom: 1px solid var(--fg); }
       .settings-grid { grid-template-columns: 1fr; }
       .field { border-right: none; }
-      .header { flex-direction: column; gap: 20px; align-items: flex-start; }
+      .toolbar { flex-direction: column; gap: 10px; align-items: flex-start; }
+      .toolbar-right { width: 100%; justify-content: flex-end; }
     }
   </style>
 </head>
 <body>
   <div class="shell">
 
-    <div class="header">
-      <div>
-        <h1>IELTS Daily</h1>
-        <div class="sub">a quiet system for daily practice</div>
-        <div class="accent-line"></div>
+    <!-- MASTHEAD -->
+    <header class="masthead">
+      <div class="masthead-top">
+        <span>Vol. 1 &middot; ${today()}</span>
+        <span>Fly.io Edition</span>
       </div>
-      <div class="header-right">
-        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode" id="themeBtn"></button>
-        <form method="POST" action="/trigger" onsubmit="this.querySelector('button').textContent='Sending\u2026'">
-          <button type="submit" class="trigger-btn">Send now</button>
+      <h1>The IELTS Daily</h1>
+      <div class="tagline">All the Practice That&rsquo;s Fit to Send</div>
+    </header>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <div class="toolbar-left">Mission Control</div>
+      <div class="toolbar-right">
+        <button class="btn-icon" onclick="toggleTheme()" title="Toggle dark mode" id="themeBtn"></button>
+        <form method="POST" action="/trigger" style="display:inline;" onsubmit="this.querySelector('button').textContent='SENDING\u2026'">
+          <button type="submit" class="btn-primary">Send Now</button>
         </form>
       </div>
     </div>
 
-    <div class="stats">
-      <div class="stat-card">
-        <div class="label">Total</div>
-        <div class="val c-default">${stats.total}</div>
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="label">Total Sent</div>
+        <div class="val">${stats.total}</div>
       </div>
-      <div class="stat-card">
+      <div class="stat">
         <div class="label">Delivered</div>
-        <div class="val c-blue">${stats.success}</div>
+        <div class="val">${stats.success}</div>
       </div>
-      <div class="stat-card">
+      <div class="stat red">
         <div class="label">Failed</div>
-        <div class="val c-terra">${stats.error}</div>
+        <div class="val">${stats.error}</div>
       </div>
-      <div class="stat-card">
+      <div class="stat">
         <div class="label">Pending</div>
-        <div class="val c-muted">${stats.pending}</div>
+        <div class="val">${stats.pending}</div>
       </div>
     </div>
 
+    <!-- EMAIL LOG -->
     <div class="section">
       <div class="section-head">
-        <h2>Email log</h2>
-        <span class="hint">last 30</span>
+        <h2>Transmission Log</h2>
+        <span class="hint">Last 30 entries</span>
       </div>
       ${
         logs.length === 0
-          ? '<div class="empty-state">No emails sent yet. Press &ldquo;Send now&rdquo; to begin.</div>'
+          ? '<div class="empty-state">No transmissions yet. Press &ldquo;Send Now&rdquo; to begin.</div>'
           : `<table>
         <thead><tr>
           <th>#</th><th>Date</th><th>Article</th><th>Source</th><th>Status</th><th>Time</th><th>Error</th>
@@ -560,14 +615,15 @@ function renderDashboard(
       }
     </div>
 
+    <!-- FEEDBACK -->
     <div class="section">
       <div class="section-head">
-        <h2>Student feedback</h2>
-        <span class="hint">reply evaluations</span>
+        <h2>Student Evaluations</h2>
+        <span class="hint">Reply feedback</span>
       </div>
       ${
         feedback.length === 0
-          ? '<div class="empty-state">No replies received yet. Waiting for students to respond.</div>'
+          ? '<div class="empty-state">No student replies received yet.</div>'
           : `<table>
         <thead><tr>
           <th>Received</th><th>Student</th><th>Score</th><th>Status</th>
@@ -577,10 +633,11 @@ function renderDashboard(
       }
     </div>
 
+    <!-- SETTINGS -->
     <div class="section">
       <div class="section-head">
-        <h2>Settings</h2>
-        <span class="hint">live configuration</span>
+        <h2>Configuration</h2>
+        <span class="hint">Live settings</span>
       </div>
       <form method="POST" action="/settings">
         <div class="settings-grid">
@@ -589,65 +646,57 @@ function renderDashboard(
             <input type="text" name="recipients" value="${esc(settings.recipients)}" placeholder="email1@x.com, email2@x.com">
           </div>
           <div class="field">
-            <label>From address</label>
+            <label>From Address</label>
             <input type="text" name="from_email" value="${esc(settings.from_email)}" placeholder="ielts@yourdomain.com">
           </div>
           <div class="field">
-            <label>Schedule (cron)</label>
+            <label>Schedule (Cron)</label>
             <input type="text" name="cron_schedule" value="${esc(settings.cron_schedule)}" placeholder="0 7 * * *">
           </div>
           <div class="field">
             <label>Timezone</label>
-            <input type="text" value="${esc(settings.cron_timezone || "UTC")}" disabled style="color:var(--text-faint);">
+            <input type="text" value="${esc(settings.cron_timezone || "UTC")}" disabled>
           </div>
         </div>
         <div class="save-row">
-          <button type="submit" class="save-btn">Save changes</button>
+          <button type="submit" class="btn-outline">Save Changes</button>
         </div>
       </form>
     </div>
 
-    <div class="refresh">
-      refreshes every 30s &mdash; <a href="/">refresh now</a>
+    <div class="footer-rule">&#x2727; &#x2727; &#x2727;</div>
+    <div class="footer">
+      Auto-refresh 30s &middot; <a href="/">Refresh now</a>
     </div>
 
   </div>
   <script>
-    // Theme toggle — persists in localStorage
-    function getTheme() {
-      return localStorage.getItem('theme') || 'auto';
-    }
+    function getTheme() { return localStorage.getItem('theme') || 'auto'; }
     function applyTheme() {
-      const t = getTheme();
-      const html = document.documentElement;
-      html.removeAttribute('data-theme');
-      if (t === 'dark') html.setAttribute('data-theme', 'dark');
-      else if (t === 'light') html.setAttribute('data-theme', 'light');
-      // 'auto' = no attribute, CSS media query handles it
+      var t = getTheme(), h = document.documentElement;
+      h.removeAttribute('data-theme');
+      if (t === 'dark') h.setAttribute('data-theme', 'dark');
+      else if (t === 'light') h.setAttribute('data-theme', 'light');
       updateIcon();
     }
     function isDark() {
-      const t = getTheme();
+      var t = getTheme();
       if (t === 'dark') return true;
       if (t === 'light') return false;
       return window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
     function updateIcon() {
-      const btn = document.getElementById('themeBtn');
-      if (btn) btn.textContent = isDark() ? '\\u2600' : '\\u263E';
+      var b = document.getElementById('themeBtn');
+      if (b) b.textContent = isDark() ? '\\u2600' : '\\u263E';
     }
     function toggleTheme() {
-      const current = getTheme();
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      let next;
-      if (current === 'auto') next = prefersDark ? 'light' : 'dark';
-      else if (current === 'dark') next = 'light';
-      else next = 'dark';
-      localStorage.setItem('theme', next);
+      var c = getTheme(), pd = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var n = c === 'auto' ? (pd ? 'light' : 'dark') : c === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('theme', n);
       applyTheme();
     }
     applyTheme();
-    setTimeout(() => location.reload(), 30000);
+    setTimeout(function(){ location.reload(); }, 30000);
   </script>
 </body>
 </html>`;

@@ -43,8 +43,8 @@ console.log("IELTS Daily Email scheduler started. Cron: 7:00 AM UTC.");
 
 // Web dashboard
 const port = Number(process.env.PORT) || 8080;
-serve({ fetch: dashboard.fetch, port }, () => {
-  console.log(`Dashboard running on http://localhost:${port}`);
+serve({ fetch: dashboard.fetch, port, hostname: "0.0.0.0" }, () => {
+  console.log(`Dashboard running on http://0.0.0.0:${port}`);
 });
 
 // Manual trigger via env var
