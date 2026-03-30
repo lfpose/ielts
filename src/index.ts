@@ -2,11 +2,9 @@ import cron from "node-cron";
 import { serve } from "@hono/node-server";
 import { fetchRandomArticle } from "./services/article.js";
 import { generateQuestions } from "./services/questions.js";
-import { sendIELTSEmail } from "./services/email.js";
+import { sendIELTSEmail, getRecipients } from "./services/email.js";
 import { logEmailStart, logEmailSuccess, logEmailError } from "./db.js";
 import dashboard from "./dashboard.js";
-
-const RECIPIENTS = (process.env.RECIPIENTS || "").split(",").filter(Boolean);
 
 export async function runDailyJob() {
   const start = Date.now();
@@ -19,7 +17,8 @@ export async function runDailyJob() {
     const article = await fetchRandomArticle();
     console.log(`Article: "${article.title}" from ${article.source}`);
 
-    logId = logEmailStart(article.title, article.source, article.url, RECIPIENTS.join(", "));
+    const recipients = getRecipients();
+    logId = logEmailStart(article.title, article.source, article.url, recipients.join(", "));
 
     console.log("Generating IELTS questions...");
     const ielts = await generateQuestions(article);
@@ -28,7 +27,7 @@ export async function runDailyJob() {
     await sendIELTSEmail(article, ielts);
 
     const duration = Date.now() - start;
-    if (logId) logEmailSuccess(logId, duration);
+    if (logId) logEmailSuccess(logId, duration, ielts.questions, ielts.answerKey);
     console.log(`Done! Email sent in ${(duration / 1000).toFixed(1)}s`);
   } catch (err) {
     const duration = Date.now() - start;
@@ -48,7 +47,7 @@ serve({ fetch: dashboard.fetch, port }, () => {
   console.log(`Dashboard running on http://localhost:${port}`);
 });
 
-// Manual trigger via env var (for testing)
+// Manual trigger via env var
 if (process.env.RUN_NOW === "true") {
   runDailyJob();
 }

@@ -11,7 +11,8 @@ export interface IELTSQuestions {
 
 const SYSTEM_PROMPT = `You are an expert IELTS examiner who creates Academic Reading test questions.
 You create questions that match the official IELTS difficulty level and format exactly.
-All questions must be answerable solely from the passage provided.`;
+All questions must be answerable solely from the passage provided.
+Use clear, simple English appropriate for IELTS test-takers.`;
 
 const USER_PROMPT = (article: Article) => `Based on the following article, create an IELTS Academic Reading practice set.
 
@@ -35,10 +36,13 @@ Create the following question types (8-10 questions total):
    - Complete sentences using words from the passage
    - Specify the word limit (e.g., "NO MORE THAN THREE WORDS")
 
-Format your response in exactly two sections separated by "---ANSWERS---":
+Format your response in EXACTLY two sections separated by the marker "---ANSWERS---":
 
-SECTION 1: The questions (clearly numbered and formatted, with instructions for each question type)
-SECTION 2: The answer key with brief explanations
+SECTION 1 (before the marker): The questions only. Clearly numbered, with instructions for each question type. Use proper spacing between sections. Do NOT include any answers here.
+
+SECTION 2 (after the marker): The complete answer key with:
+- The correct answer for each question
+- A brief explanation referencing the relevant part of the passage
 
 Do NOT include the passage in your response — only the questions and answers.`;
 
@@ -64,4 +68,52 @@ export async function generateQuestions(
     questions,
     answerKey,
   };
+}
+
+// Evaluate user answers against the answer key
+export async function evaluateAnswers(
+  questions: string,
+  answerKey: string,
+  userAnswers: string,
+  userName: string
+): Promise<{ score: string; feedback: string }> {
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 1500,
+    system: `You are a warm, encouraging IELTS tutor providing feedback on a student's reading practice answers. Be specific about what they got right and wrong, reference the passage, and give practical tips for improvement. Address the student by name.`,
+    messages: [
+      {
+        role: "user",
+        content: `Student name: ${userName}
+
+QUESTIONS:
+${questions}
+
+CORRECT ANSWERS:
+${answerKey}
+
+STUDENT'S ANSWERS:
+${userAnswers}
+
+Please provide:
+1. SCORE: X/Y correct (as a simple fraction)
+2. DETAILED FEEDBACK for each question:
+   - Whether they got it right or wrong
+   - If wrong, explain the correct answer with reference to the passage
+   - Tips for approaching this question type
+3. OVERALL ASSESSMENT: A brief encouraging summary with 1-2 specific study tips
+
+Keep the tone warm and motivating. Use simple, clear English.`,
+      },
+    ],
+  });
+
+  const text =
+    response.content[0].type === "text" ? response.content[0].text : "";
+
+  // Extract score from the response
+  const scoreMatch = text.match(/(\d+)\s*\/\s*(\d+)/);
+  const score = scoreMatch ? `${scoreMatch[1]}/${scoreMatch[2]}` : "See feedback";
+
+  return { score, feedback: text };
 }
