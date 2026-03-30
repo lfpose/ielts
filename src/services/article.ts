@@ -1,22 +1,26 @@
 import RSSParser from "rss-parser";
 import { extract } from "@extractus/article-extractor";
 
-// Curated feeds: fascinating stories, discoveries, culture, science
-// No financial news. Focus on things that make people more curious and intellectual.
+// Curated feeds: curiosity, discovery, nature, culture, "why" questions
+// Simple English, fascinating topics. NOT financial news.
 const RSS_FEEDS = [
+  // Curiosity & "Why" questions (Britannica-style)
+  "https://www.britannica.com/feeds/content/story",
+
   // Science & Discovery
   "https://www.atlasobscura.com/feeds/latest",
   "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
+
+  // Nature & Animals
   "https://www.nationalgeographic.com/feed",
 
-  // Culture & Ideas
+  // Ideas & Culture
   "https://feeds.bbci.co.uk/future/feed",
   "https://www.theguardian.com/science/rss",
-  "https://www.theguardian.com/culture/rss",
-
-  // Nature & World
   "https://www.smithsonianmag.com/rss/latest_articles/",
-  "https://feeds.bbci.co.uk/news/world/rss.xml",
+
+  // History & Interesting facts
+  "https://www.theguardian.com/culture/rss",
 ];
 
 const parser = new RSSParser();

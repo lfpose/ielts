@@ -19,12 +19,10 @@ const DASH_PASS = process.env.DASH_PASS || "ielts2024";
 
 const app = new Hono();
 
-// Inbound email webhook (NO auth — Resend needs to reach this)
+// --- Inbound email webhook (no auth — Resend calls this) ---
 app.post("/webhook/inbound", async (c) => {
   try {
     const body = await c.req.json();
-
-    // Resend inbound webhook payload
     const fromEmail = body.from?.match(/<([^>]+)>/)?.[1] || body.from || "";
     const textBody = body.text || body.html?.replace(/<[^>]*>/g, " ") || "";
 
@@ -34,21 +32,17 @@ app.post("/webhook/inbound", async (c) => {
 
     console.log(`Inbound reply from: ${fromEmail}`);
 
-    // Find the most recent email sent to this person
     const latestEmail = getLatestEmailForRecipient(fromEmail);
     if (!latestEmail || !latestEmail.questions || !latestEmail.answer_key) {
       console.log(`No matching email found for ${fromEmail}`);
       return c.json({ ok: true, skipped: "no matching email" });
     }
 
-    // Extract just the user's reply (strip quoted text)
     const userAnswers = extractReplyText(textBody);
     const userName = fromEmail.split("@")[0].replace(/[._]/g, " ");
 
-    // Log and process
     const fbId = logFeedbackStart(latestEmail.id, fromEmail, userAnswers);
 
-    // Evaluate answers with Claude
     const result = await evaluateAnswers(
       latestEmail.questions,
       latestEmail.answer_key,
@@ -57,8 +51,6 @@ app.post("/webhook/inbound", async (c) => {
     );
 
     logFeedbackComplete(fbId, result.score, result.feedback);
-
-    // Send feedback email
     await sendFeedbackEmail(fromEmail, result.feedback, result.score, latestEmail.article_title);
 
     console.log(`Feedback sent to ${fromEmail}: ${result.score}`);
@@ -69,12 +61,10 @@ app.post("/webhook/inbound", async (c) => {
   }
 });
 
-// Strip quoted reply text (lines starting with > or "On ... wrote:")
 function extractReplyText(text: string): string {
   const lines = text.split("\n");
   const replyLines: string[] = [];
   for (const line of lines) {
-    // Stop at quoted text markers
     if (/^On .+ wrote:/.test(line.trim())) break;
     if (/^-{3,}/.test(line.trim())) break;
     if (/^>/.test(line.trim())) continue;
@@ -83,10 +73,9 @@ function extractReplyText(text: string): string {
   return replyLines.join("\n").trim() || text.trim();
 }
 
-// Auth for all other routes
+// --- Auth for dashboard routes ---
 app.use("/*", basicAuth({ username: DASH_USER, password: DASH_PASS }));
 
-// --- Dashboard ---
 app.get("/", (c) => {
   const stats = getStats();
   const logs = getRecentLogs(30);
@@ -95,13 +84,11 @@ app.get("/", (c) => {
   return c.html(renderDashboard(stats, logs, settings, feedback));
 });
 
-// --- Manual Trigger ---
 app.post("/trigger", async (c) => {
   runDailyJob().catch((err) => console.error("Manual trigger failed:", err));
   return c.redirect("/");
 });
 
-// --- Settings ---
 app.post("/settings", async (c) => {
   const body = await c.req.parseBody();
   if (typeof body.recipients === "string") setSetting("recipients", body.recipients.trim());
@@ -110,7 +97,6 @@ app.post("/settings", async (c) => {
   return c.redirect("/");
 });
 
-// --- API ---
 app.get("/api/logs", (c) => c.json({ stats: getStats(), logs: getRecentLogs(50) }));
 app.get("/api/feedback", (c) => c.json({ feedback: getRecentFeedback(50) }));
 
@@ -120,15 +106,18 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function statusBlock(status: string): string {
-  const map: Record<string, { ch: string; color: string }> = {
-    success: { ch: "&#9608;&#9608;", color: "#7ab87a" },
-    error: { ch: "&#9608;&#9608;", color: "#d45050" },
-    pending: { ch: "&#9608;&#9608;", color: "#d4a054" },
-    sent: { ch: "&#9608;&#9608;", color: "#7ab87a" },
+function statusDot(status: string): string {
+  const colors: Record<string, string> = {
+    success: "#4A5899",
+    error: "#C47A5A",
+    pending: "#B0A898",
+    sent: "#4A5899",
   };
-  const s = map[status] || { ch: "??", color: "#555" };
-  return `<span style="color:${s.color};font-size:12px;">${s.ch} ${status.toUpperCase()}</span>`;
+  const color = colors[status] || "#B0A898";
+  return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:${color};">
+    <span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block;"></span>
+    ${status}
+  </span>`;
 }
 
 function renderDashboard(
@@ -141,15 +130,15 @@ function renderDashboard(
     .map(
       (l: any) => `
     <tr>
-      <td style="padding:10px 12px;border-bottom:1px dashed #2a2418;color:#5a5040;font-size:12px;">${l.id}</td>
-      <td style="padding:10px 12px;border-bottom:1px dashed #2a2418;color:#8a7a60;font-size:12px;white-space:nowrap;">${l.sent_at}</td>
-      <td style="padding:10px 12px;border-bottom:1px dashed #2a2418;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-        <a href="${esc(l.article_url)}" target="_blank" style="color:#d4a054;text-decoration:none;">${esc(l.article_title)}</a>
+      <td class="td">${l.id}</td>
+      <td class="td" style="white-space:nowrap;color:#8A8278;">${l.sent_at}</td>
+      <td class="td" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        <a href="${esc(l.article_url)}" target="_blank" style="color:#4A5899;text-decoration:none;border-bottom:1px solid #D5CFC5;">${esc(l.article_title)}</a>
       </td>
-      <td style="padding:10px 12px;border-bottom:1px dashed #2a2418;color:#6a6050;font-size:12px;">${esc(l.article_source)}</td>
-      <td style="padding:10px 12px;border-bottom:1px dashed #2a2418;">${statusBlock(l.status)}</td>
-      <td style="padding:10px 12px;border-bottom:1px dashed #2a2418;color:#6a6050;font-size:12px;">${l.duration_ms ? (l.duration_ms / 1000).toFixed(1) + "s" : "---"}</td>
-      <td style="padding:10px 12px;border-bottom:1px dashed #2a2418;color:#d45050;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.error ? esc(l.error) : ""}</td>
+      <td class="td" style="color:#8A8278;">${esc(l.article_source)}</td>
+      <td class="td">${statusDot(l.status)}</td>
+      <td class="td" style="color:#8A8278;">${l.duration_ms ? (l.duration_ms / 1000).toFixed(1) + "s" : "&mdash;"}</td>
+      <td class="td" style="color:#C47A5A;font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.error ? esc(l.error) : ""}</td>
     </tr>`
     )
     .join("");
@@ -158,10 +147,10 @@ function renderDashboard(
     .map(
       (f: any) => `
     <tr>
-      <td style="padding:8px 12px;border-bottom:1px dashed #1a2a18;color:#5a8a5a;font-size:12px;">${f.received_at}</td>
-      <td style="padding:8px 12px;border-bottom:1px dashed #1a2a18;color:#8a9a80;font-size:12px;">${esc(f.user_email)}</td>
-      <td style="padding:8px 12px;border-bottom:1px dashed #1a2a18;color:#7ab87a;font-size:14px;font-weight:700;">${f.score ? esc(f.score) : "---"}</td>
-      <td style="padding:8px 12px;border-bottom:1px dashed #1a2a18;">${statusBlock(f.status)}</td>
+      <td class="td" style="color:#8A8278;">${f.received_at}</td>
+      <td class="td">${esc(f.user_email)}</td>
+      <td class="td" style="color:#4A5899;font-weight:600;font-size:16px;">${f.score ? esc(f.score) : "&mdash;"}</td>
+      <td class="td">${statusDot(f.status)}</td>
     </tr>`
     )
     .join("");
@@ -171,36 +160,25 @@ function renderDashboard(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IELTS / DAILY — CONTROL</title>
+  <title>IELTS Daily</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'JetBrains Mono', 'Courier New', monospace;
-      background: #0e0c08;
-      color: #c0b090;
+      font-family: 'Source Serif 4', Georgia, serif;
+      background: #F5F1EB;
+      color: #2C2C2C;
       min-height: 100vh;
-    }
-
-    /* Scanline overlay */
-    body::after {
-      content: '';
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: repeating-linear-gradient(
-        transparent, transparent 2px,
-        rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px
-      );
-      pointer-events: none;
-      z-index: 999;
+      /* Subtle paper grain */
+      background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
     }
 
     .shell {
-      max-width: 1200px;
+      max-width: 960px;
       margin: 0 auto;
-      padding: 32px 24px;
+      padding: 48px 32px;
     }
 
     /* HEADER */
@@ -208,118 +186,121 @@ function renderDashboard(
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      border: 1px dashed #3a3020;
-      padding: 28px 32px;
-      margin-bottom: 32px;
+      margin-bottom: 48px;
     }
 
     .header h1 {
-      font-family: 'Inter', sans-serif;
-      font-size: 36px;
-      font-weight: 900;
-      color: #d4a054;
-      letter-spacing: 3px;
-      text-shadow: 2px 2px 0 #8b4d3b, 4px 4px 0 #5c2d3e;
-      line-height: 1;
+      font-size: 32px;
+      font-weight: 700;
+      color: #2C2C2C;
+      letter-spacing: 0.5px;
     }
 
     .header .sub {
-      font-size: 11px;
-      color: #5a5040;
-      letter-spacing: 5px;
-      text-transform: uppercase;
-      margin-top: 8px;
+      font-size: 14px;
+      color: #8A8278;
+      font-style: italic;
+      font-weight: 300;
+      margin-top: 4px;
+    }
+
+    .header .accent-line {
+      width: 48px;
+      height: 2px;
+      background: #C47A5A;
+      margin-top: 12px;
     }
 
     .trigger-btn {
-      font-family: 'JetBrains Mono', monospace;
-      background: transparent;
-      color: #d4a054;
-      border: 2px solid #d4a054;
-      padding: 14px 28px;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 3px;
-      text-transform: uppercase;
+      font-family: 'Source Serif 4', Georgia, serif;
+      background: #4A5899;
+      color: #FFFFFF;
+      border: none;
+      padding: 14px 32px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
       cursor: pointer;
-      transition: all 0.15s;
+      transition: all 0.2s;
+      letter-spacing: 0.3px;
     }
     .trigger-btn:hover {
-      background: #d4a054;
-      color: #0e0c08;
+      background: #3A4880;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(74, 88, 153, 0.25);
     }
     .trigger-btn:active {
-      background: #f0d090;
+      transform: translateY(0);
     }
 
-    /* STATS GRID */
+    /* STATS */
     .stats {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 0;
-      margin-bottom: 32px;
-      border: 1px dashed #3a3020;
+      gap: 20px;
+      margin-bottom: 48px;
     }
 
-    .stat {
+    .stat-card {
+      background: #FFFFFF;
+      border-radius: 10px;
       padding: 24px;
-      border-right: 1px dashed #2a2418;
+      position: relative;
+      /* Warm diffused shadow — page on page */
+      box-shadow: 0 1px 3px rgba(180, 170, 155, 0.15), 0 4px 12px rgba(180, 170, 155, 0.08);
     }
-    .stat:last-child { border-right: none; }
 
-    .stat .label {
-      font-size: 10px;
-      color: #5a5040;
-      letter-spacing: 4px;
+    .stat-card .label {
+      font-size: 12px;
+      color: #B0A898;
       text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 400;
       margin-bottom: 8px;
     }
 
-    .stat .val {
-      font-family: 'Inter', sans-serif;
-      font-size: 42px;
-      font-weight: 900;
+    .stat-card .val {
+      font-size: 38px;
+      font-weight: 700;
       line-height: 1;
     }
-    .stat .bar {
-      margin-top: 10px;
-      font-size: 12px;
-      letter-spacing: 1px;
-    }
 
-    .c-amber { color: #d4a054; }
-    .c-green { color: #7ab87a; }
-    .c-red { color: #d45050; }
-    .c-yellow { color: #d4a054; }
+    .c-default { color: #2C2C2C; }
+    .c-blue { color: #4A5899; }
+    .c-terra { color: #C47A5A; }
+    .c-muted { color: #B0A898; }
 
     /* SECTIONS */
     .section {
-      border: 1px dashed #3a3020;
+      background: #FFFFFF;
+      border-radius: 10px;
       margin-bottom: 32px;
+      box-shadow: 0 1px 3px rgba(180, 170, 155, 0.15), 0 4px 12px rgba(180, 170, 155, 0.08);
+      overflow: hidden;
     }
 
     .section-head {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 14px 24px;
-      border-bottom: 1px dashed #3a3020;
+      padding: 20px 28px;
+      border-bottom: 1px solid #EDE8E0;
     }
 
     .section-head h2 {
-      font-family: 'Inter', sans-serif;
-      font-size: 14px;
-      font-weight: 800;
-      color: #d4a054;
-      letter-spacing: 4px;
+      font-size: 13px;
+      font-weight: 400;
+      color: #B0A898;
       text-transform: uppercase;
-      text-shadow: 1px 1px 0 #5c2d3e;
+      letter-spacing: 2px;
+      font-family: 'IBM Plex Mono', monospace;
     }
 
     .section-head .hint {
-      font-size: 10px;
-      color: #4a4030;
-      letter-spacing: 2px;
+      font-size: 12px;
+      color: #D5CFC5;
+      font-style: italic;
     }
 
     /* TABLE */
@@ -330,25 +311,34 @@ function renderDashboard(
 
     th {
       text-align: left;
-      padding: 12px 12px;
-      font-size: 10px;
-      letter-spacing: 3px;
+      padding: 14px 16px;
+      font-size: 11px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
-      color: #4a4030;
-      border-bottom: 1px solid #2a2418;
+      color: #B0A898;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 400;
+      border-bottom: 1px solid #EDE8E0;
     }
 
-    tr:hover td { background: #161208; }
+    .td {
+      padding: 14px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid #F5F1EB;
+      color: #2C2C2C;
+    }
+
+    tr:hover .td { background: #FDFCFA; }
 
     .empty-state {
       text-align: center;
-      padding: 48px;
-      color: #3a3020;
-      font-size: 14px;
-      letter-spacing: 2px;
+      padding: 56px 28px;
+      color: #B0A898;
+      font-size: 15px;
+      font-style: italic;
     }
 
-    /* SETTINGS FORM */
+    /* SETTINGS */
     .settings-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -356,197 +346,178 @@ function renderDashboard(
     }
 
     .field {
-      padding: 20px 24px;
-      border-right: 1px dashed #2a2418;
-      border-bottom: 1px dashed #2a2418;
+      padding: 20px 28px;
+      border-right: 1px solid #F5F1EB;
+      border-bottom: 1px solid #F5F1EB;
     }
     .field:nth-child(even) { border-right: none; }
 
     .field label {
       display: block;
-      font-size: 10px;
-      color: #5a5040;
-      letter-spacing: 3px;
+      font-size: 11px;
+      color: #B0A898;
       text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-family: 'IBM Plex Mono', monospace;
       margin-bottom: 8px;
     }
 
     .field input {
       width: 100%;
-      background: #161208;
-      border: 1px dashed #3a3020;
-      color: #d0c8b0;
-      font-family: 'JetBrains Mono', monospace;
+      background: #FDFCFA;
+      border: 1px solid #EDE8E0;
+      color: #2C2C2C;
+      font-family: 'IBM Plex Mono', monospace;
       font-size: 13px;
       padding: 10px 14px;
+      border-radius: 6px;
       outline: none;
+      transition: border-color 0.2s;
     }
     .field input:focus {
-      border-color: #d4a054;
+      border-color: #4A5899;
     }
 
     .save-row {
-      padding: 16px 24px;
+      padding: 16px 28px;
       text-align: right;
-      border-top: 1px dashed #2a2418;
     }
 
     .save-btn {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: 'Source Serif 4', Georgia, serif;
       background: transparent;
-      color: #7ab87a;
-      border: 1px solid #7ab87a;
-      padding: 10px 24px;
-      font-size: 12px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
+      color: #4A5899;
+      border: 1px solid #4A5899;
+      padding: 10px 28px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 6px;
       cursor: pointer;
+      transition: all 0.2s;
     }
     .save-btn:hover {
-      background: #7ab87a;
-      color: #0e0c08;
+      background: #4A5899;
+      color: #FFFFFF;
     }
 
-    /* REFRESH */
     .refresh {
       text-align: center;
       padding: 24px;
-      font-size: 10px;
-      color: #2a2418;
-      letter-spacing: 3px;
+      font-size: 12px;
+      color: #D5CFC5;
+      font-style: italic;
     }
-    .refresh a { color: #4a4030; text-decoration: none; }
-    .refresh a:hover { color: #d4a054; }
+    .refresh a { color: #B0A898; text-decoration: none; }
+    .refresh a:hover { color: #4A5899; border-bottom: 1px solid #4A5899; }
 
     @media (max-width: 768px) {
+      .shell { padding: 24px 16px; }
       .stats { grid-template-columns: repeat(2, 1fr); }
-      .stat { border-bottom: 1px dashed #2a2418; }
       .settings-grid { grid-template-columns: 1fr; }
       .field { border-right: none; }
-      .header { flex-direction: column; gap: 16px; align-items: flex-start; }
+      .header { flex-direction: column; gap: 20px; align-items: flex-start; }
     }
   </style>
 </head>
 <body>
   <div class="shell">
 
-    <!-- HEADER -->
     <div class="header">
       <div>
-        <h1>IELTS / DAILY</h1>
-        <div class="sub">mission control &mdash; system dashboard</div>
+        <h1>IELTS Daily</h1>
+        <div class="sub">a quiet system for daily practice</div>
+        <div class="accent-line"></div>
       </div>
-      <form method="POST" action="/trigger" onsubmit="this.querySelector('button').textContent='&#9608; SENDING...'">
-        <button type="submit" class="trigger-btn">&#9654; SEND NOW</button>
+      <form method="POST" action="/trigger" onsubmit="this.querySelector('button').textContent='Sending\u2026'">
+        <button type="submit" class="trigger-btn">Send now</button>
       </form>
     </div>
 
-    <!-- STATS -->
     <div class="stats">
-      <div class="stat">
-        <div class="label">total / sent</div>
-        <div class="val c-amber">${stats.total}</div>
-        <div class="bar c-amber">${"&#9608;".repeat(Math.min(stats.total, 20))}</div>
+      <div class="stat-card">
+        <div class="label">Total</div>
+        <div class="val c-default">${stats.total}</div>
       </div>
-      <div class="stat">
-        <div class="label">status / ok</div>
-        <div class="val c-green">${stats.success}</div>
-        <div class="bar c-green">${"&#9608;".repeat(Math.min(stats.success, 20))}</div>
+      <div class="stat-card">
+        <div class="label">Delivered</div>
+        <div class="val c-blue">${stats.success}</div>
       </div>
-      <div class="stat">
-        <div class="label">status / fail</div>
-        <div class="val c-red">${stats.error}</div>
-        <div class="bar c-red">${"&#9608;".repeat(Math.min(stats.error, 20))}</div>
+      <div class="stat-card">
+        <div class="label">Failed</div>
+        <div class="val c-terra">${stats.error}</div>
       </div>
-      <div class="stat">
-        <div class="label">status / queue</div>
-        <div class="val c-yellow">${stats.pending}</div>
-        <div class="bar c-yellow">${"&#9608;".repeat(Math.min(stats.pending, 20))}</div>
+      <div class="stat-card">
+        <div class="label">Pending</div>
+        <div class="val c-muted">${stats.pending}</div>
       </div>
     </div>
 
-    <!-- EMAIL LOG -->
     <div class="section">
       <div class="section-head">
-        <h2>LOG / TRANSMISSIONS</h2>
-        <span class="hint">LAST 30 ENTRIES</span>
+        <h2>Email log</h2>
+        <span class="hint">last 30</span>
       </div>
       ${
         logs.length === 0
-          ? '<div class="empty-state">&gt; NO TRANSMISSIONS YET &mdash; HIT SEND NOW _</div>'
+          ? '<div class="empty-state">No emails sent yet. Press &ldquo;Send now&rdquo; to begin.</div>'
           : `<table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>timestamp</th>
-            <th>article</th>
-            <th>source</th>
-            <th>status</th>
-            <th>time</th>
-            <th>error</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th>#</th><th>Date</th><th>Article</th><th>Source</th><th>Status</th><th>Time</th><th>Error</th>
+        </tr></thead>
         <tbody>${logRows}</tbody>
       </table>`
       }
     </div>
 
-    <!-- FEEDBACK LOG -->
     <div class="section">
       <div class="section-head">
-        <h2>LOG / STUDENT FEEDBACK</h2>
-        <span class="hint">REPLY EVALUATIONS</span>
+        <h2>Student feedback</h2>
+        <span class="hint">reply evaluations</span>
       </div>
       ${
         feedback.length === 0
-          ? '<div class="empty-state">&gt; NO REPLIES RECEIVED YET &mdash; WAITING FOR STUDENTS _</div>'
+          ? '<div class="empty-state">No replies received yet. Waiting for students to respond.</div>'
           : `<table>
-        <thead>
-          <tr>
-            <th>received</th>
-            <th>student</th>
-            <th>score</th>
-            <th>status</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th>Received</th><th>Student</th><th>Score</th><th>Status</th>
+        </tr></thead>
         <tbody>${feedbackRows}</tbody>
       </table>`
       }
     </div>
 
-    <!-- SETTINGS -->
     <div class="section">
       <div class="section-head">
-        <h2>CONFIG / SETTINGS</h2>
-        <span class="hint">LIVE CONFIGURATION</span>
+        <h2>Settings</h2>
+        <span class="hint">live configuration</span>
       </div>
       <form method="POST" action="/settings">
         <div class="settings-grid">
           <div class="field">
-            <label>recipients / email list</label>
-            <input type="text" name="recipients" value="${esc(settings.recipients)}" placeholder="email1@x.com,email2@x.com">
+            <label>Recipients</label>
+            <input type="text" name="recipients" value="${esc(settings.recipients)}" placeholder="email1@x.com, email2@x.com">
           </div>
           <div class="field">
-            <label>from / sender address</label>
+            <label>From address</label>
             <input type="text" name="from_email" value="${esc(settings.from_email)}" placeholder="ielts@yourdomain.com">
           </div>
           <div class="field">
-            <label>schedule / cron expression</label>
+            <label>Schedule (cron)</label>
             <input type="text" name="cron_schedule" value="${esc(settings.cron_schedule)}" placeholder="0 7 * * *">
           </div>
           <div class="field">
-            <label>timezone / reference</label>
-            <input type="text" name="timezone" value="${esc(settings.cron_timezone || "UTC")}" disabled>
+            <label>Timezone</label>
+            <input type="text" value="${esc(settings.cron_timezone || "UTC")}" disabled style="color:#B0A898;">
           </div>
         </div>
         <div class="save-row">
-          <button type="submit" class="save-btn">&#9654; SAVE CONFIG</button>
+          <button type="submit" class="save-btn">Save changes</button>
         </div>
       </form>
     </div>
 
     <div class="refresh">
-      AUTO-REFRESH 30S &mdash; <a href="/">MANUAL REFRESH</a>
+      refreshes every 30s &mdash; <a href="/">refresh now</a>
     </div>
 
   </div>

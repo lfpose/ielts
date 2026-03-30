@@ -14,7 +14,7 @@ function textToHtml(text: string): string {
     .split("\n\n")
     .map((block) => {
       const lines = block.split("\n");
-      return `<p style="margin:0 0 14px;line-height:1.75;">${lines.join("<br>")}</p>`;
+      return `<p style="margin:0 0 16px;line-height:1.8;color:#2C2C2C;">${lines.join("<br>")}</p>`;
     })
     .join("");
 }
@@ -30,80 +30,73 @@ export function buildEmailHtml(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin:0;padding:0;background:#1a1410;font-family:'Courier New',Courier,monospace;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1410;">
-    <tr><td align="center" style="padding:24px 16px;">
-      <table width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;">
+<body style="margin:0;padding:0;background:#F5F1EB;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F1EB;">
+    <tr><td align="center" style="padding:32px 16px;">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
 
         <!-- HEADER -->
-        <tr><td style="padding:32px 0 24px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px dashed #d4a054;">
-            <tr><td style="padding:20px 24px;">
-              <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:28px;font-weight:800;color:#d4a054;letter-spacing:2px;text-shadow:2px 2px 0 #8b4d3b,3px 3px 0 #5c2d3e;">
-                IELTS / DAILY
-              </div>
-              <div style="font-size:11px;color:#8a7a60;letter-spacing:4px;text-transform:uppercase;margin-top:6px;">
-                SYN / READING PRACTICE &mdash; ${esc(date)}
-              </div>
-            </td></tr>
-          </table>
+        <tr><td style="padding:0 0 32px;">
+          <div style="font-size:28px;font-weight:bold;color:#2C2C2C;letter-spacing:0.5px;">
+            IELTS Daily
+          </div>
+          <div style="margin-top:4px;font-size:13px;color:#8A8278;font-style:italic;">
+            ${esc(date)}
+          </div>
+          <div style="margin-top:16px;height:1px;background:linear-gradient(to right, #C47A5A, transparent);"></div>
         </td></tr>
 
-        <!-- STATUS BAR -->
-        <tr><td style="padding:0 0 20px;">
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="font-size:11px;color:#d4a054;letter-spacing:3px;text-transform:uppercase;">
-                &#9608;&#9608;&#9608; READING PASSAGE LOADED
-              </td>
-              <td align="right" style="font-size:11px;color:#5a5040;letter-spacing:2px;">
-                STATUS / ACTIVE
-              </td>
-            </tr>
-          </table>
+        <!-- SPANISH INSTRUCTION -->
+        <tr><td style="padding:0 0 28px;">
+          <div style="background:#FAF7F2;border-left:3px solid #C47A5A;padding:16px 20px;border-radius:0 8px 8px 0;">
+            <div style="font-size:13px;color:#8A8278;font-style:italic;line-height:1.7;">
+              Hola! Tu pr&aacute;ctica de hoy est&aacute; lista. Lee el art&iacute;culo en el enlace
+              de abajo y luego responde las preguntas. Cuando termines,
+              <strong style="color:#4A5899;">responde este email con tus respuestas</strong>
+              y recibir&aacute;s tu puntaje y retroalimentaci&oacute;n personalizada.
+            </div>
+          </div>
         </td></tr>
 
-        <!-- ARTICLE TITLE -->
-        <tr><td style="padding:0 0 16px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="border:2px solid #d4a054;">
-            <tr><td style="padding:20px 24px;">
-              <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:20px;font-weight:700;color:#f0e0c0;line-height:1.3;">
+        <!-- ARTICLE CARD -->
+        <tr><td style="padding:0 0 32px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:10px;overflow:hidden;">
+            <tr><td style="padding:28px 28px 20px;">
+              <div style="font-size:11px;color:#B0A898;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;">
+                Lectura de hoy
+              </div>
+              <div style="font-size:22px;font-weight:bold;color:#2C2C2C;line-height:1.35;margin-bottom:12px;">
                 ${esc(article.title)}
               </div>
-              <div style="margin-top:8px;font-size:12px;color:#8a7a60;">
-                SOURCE / ${esc(article.source).toUpperCase()} &mdash;
-                <a href="${esc(article.url)}" style="color:#d4a054;text-decoration:none;">read original &#8594;</a>
+              <div style="font-size:13px;color:#8A8278;margin-bottom:20px;">
+                ${esc(article.source)}
               </div>
-            </td></tr>
-          </table>
-        </td></tr>
-
-        <!-- PASSAGE -->
-        <tr><td style="padding:0 0 24px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px dashed #3a3020;">
-            <tr><td style="padding:6px 24px 2px;">
-              <div style="font-size:10px;color:#5a5040;letter-spacing:3px;text-transform:uppercase;">
-                &gt; READING PASSAGE
-              </div>
-            </td></tr>
-            <tr><td style="padding:8px 24px 24px;">
-              <div style="font-size:15px;color:#d0c8b0;line-height:1.8;">
-                ${textToHtml(ielts.passage)}
-              </div>
+              <a href="${esc(article.url)}" target="_blank" style="
+                display:inline-block;
+                background:#4A5899;
+                color:#FFFFFF;
+                text-decoration:none;
+                padding:12px 28px;
+                border-radius:8px;
+                font-size:14px;
+                font-family:Georgia,serif;
+              ">Leer el art&iacute;culo &rarr;</a>
             </td></tr>
           </table>
         </td></tr>
 
         <!-- QUESTIONS -->
-        <tr><td style="padding:0 0 24px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px dashed #d4a054;border-left:3px solid #d4a054;">
-            <tr><td style="padding:6px 24px 2px;">
-              <div style="font-size:10px;color:#d4a054;letter-spacing:3px;text-transform:uppercase;">
-                &gt; QUESTIONS
+        <tr><td style="padding:0 0 32px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:10px;overflow:hidden;">
+            <tr><td style="padding:28px;">
+              <div style="font-size:11px;color:#B0A898;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;">
+                Preguntas
               </div>
-            </td></tr>
-            <tr><td style="padding:8px 24px 24px;">
-              <div style="font-size:14px;color:#e8d8b8;line-height:1.8;">
+              <div style="font-size:13px;color:#8A8278;font-style:italic;margin-bottom:20px;">
+                Responde basándote en lo que le&iacute;ste en el art&iacute;culo.
+              </div>
+              <div style="height:1px;background:#EDE8E0;margin-bottom:20px;"></div>
+              <div style="font-size:15px;color:#2C2C2C;line-height:1.85;">
                 ${textToHtml(ielts.questions)}
               </div>
             </td></tr>
@@ -112,23 +105,25 @@ export function buildEmailHtml(
 
         <!-- REPLY CTA -->
         <tr><td style="padding:0 0 32px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="border:2px dashed #5c8a5c;background:#1a2018;">
-            <tr><td style="padding:20px 24px;text-align:center;">
-              <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;font-weight:700;color:#7ab87a;margin-bottom:8px;">
-                &#9654; REPLY TO THIS EMAIL WITH YOUR ANSWERS
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0EDE6;border-radius:10px;border:1px dashed #D5CFC5;">
+            <tr><td style="padding:24px 28px;text-align:center;">
+              <div style="font-size:16px;color:#4A5899;font-weight:bold;margin-bottom:6px;">
+                &iquest;Terminaste?
               </div>
-              <div style="font-size:13px;color:#5a8a5a;line-height:1.6;">
-                An AI tutor will analyze your responses and send<br>
-                personalized feedback with your score and study tips.
+              <div style="font-size:14px;color:#6B6560;line-height:1.6;">
+                Responde este email con tus respuestas.<br>
+                Un tutor de IA analizar&aacute; tus respuestas y te enviar&aacute;<br>
+                tu puntaje con comentarios personalizados.
               </div>
             </td></tr>
           </table>
         </td></tr>
 
         <!-- FOOTER -->
-        <tr><td style="padding:16px 0;border-top:1px dashed #2a2418;">
-          <div style="font-size:11px;color:#4a4030;text-align:center;letter-spacing:2px;">
-            IELTS / DAILY &mdash; KEEP GOING, YOU'VE GOT THIS
+        <tr><td style="padding:16px 0;">
+          <div style="height:1px;background:linear-gradient(to right, transparent, #D5CFC5, transparent);margin-bottom:16px;"></div>
+          <div style="font-size:12px;color:#B0A898;text-align:center;font-style:italic;">
+            IELTS Daily &mdash; Cada d&iacute;a un paso m&aacute;s cerca
           </div>
         </td></tr>
 
@@ -139,7 +134,6 @@ export function buildEmailHtml(
 </html>`;
 }
 
-// Feedback email when user replies with answers
 export function buildFeedbackHtml(
   feedback: string,
   score: string,
@@ -152,52 +146,58 @@ export function buildFeedbackHtml(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin:0;padding:0;background:#1a1410;font-family:'Courier New',Courier,monospace;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1410;">
-    <tr><td align="center" style="padding:24px 16px;">
-      <table width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;">
+<body style="margin:0;padding:0;background:#F5F1EB;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F1EB;">
+    <tr><td align="center" style="padding:32px 16px;">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
 
         <!-- HEADER -->
-        <tr><td style="padding:32px 0 24px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px dashed #7ab87a;">
-            <tr><td style="padding:20px 24px;">
-              <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:28px;font-weight:800;color:#7ab87a;letter-spacing:2px;text-shadow:2px 2px 0 #3a5a3a,3px 3px 0 #1a3a1a;">
-                IELTS / FEEDBACK
-              </div>
-              <div style="font-size:11px;color:#5a8a5a;letter-spacing:4px;text-transform:uppercase;margin-top:6px;">
-                SYN / SCORE REPORT &mdash; ${esc(date)}
-              </div>
-            </td></tr>
-          </table>
+        <tr><td style="padding:0 0 32px;">
+          <div style="font-size:28px;font-weight:bold;color:#2C2C2C;">
+            IELTS Daily
+          </div>
+          <div style="margin-top:4px;font-size:13px;color:#8A8278;font-style:italic;">
+            Resultados &mdash; ${esc(date)}
+          </div>
+          <div style="margin-top:16px;height:1px;background:linear-gradient(to right, #4A5899, transparent);"></div>
         </td></tr>
 
-        <!-- SCORE -->
-        <tr><td style="padding:0 0 20px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="border:2px solid #7ab87a;text-align:center;">
-            <tr><td style="padding:24px;">
-              <div style="font-size:11px;color:#5a8a5a;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;">
-                YOUR SCORE
+        <!-- SCORE CARD -->
+        <tr><td style="padding:0 0 28px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:10px;overflow:hidden;text-align:center;">
+            <tr><td style="padding:32px 28px;">
+              <div style="font-size:11px;color:#B0A898;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">
+                Tu puntaje
               </div>
-              <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:48px;font-weight:800;color:#7ab87a;">
+              <div style="font-size:52px;font-weight:bold;color:#4A5899;line-height:1;">
                 ${esc(score)}
               </div>
-              <div style="font-size:13px;color:#8a7a60;margin-top:8px;">
+              <div style="margin-top:12px;font-size:14px;color:#8A8278;font-style:italic;">
                 ${esc(articleTitle)}
               </div>
             </td></tr>
           </table>
         </td></tr>
 
+        <!-- SPANISH NOTE -->
+        <tr><td style="padding:0 0 24px;">
+          <div style="background:#FAF7F2;border-left:3px solid #4A5899;padding:14px 20px;border-radius:0 8px 8px 0;">
+            <div style="font-size:13px;color:#8A8278;font-style:italic;line-height:1.6;">
+              Aqu&iacute; est&aacute; tu retroalimentaci&oacute;n detallada. Lee con atenci&oacute;n los
+              comentarios de cada pregunta para mejorar tu t&eacute;cnica.
+            </div>
+          </div>
+        </td></tr>
+
         <!-- FEEDBACK -->
         <tr><td style="padding:0 0 32px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px dashed #3a3020;">
-            <tr><td style="padding:6px 24px 2px;">
-              <div style="font-size:10px;color:#d4a054;letter-spacing:3px;text-transform:uppercase;">
-                &gt; DETAILED FEEDBACK
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:10px;overflow:hidden;">
+            <tr><td style="padding:28px;">
+              <div style="font-size:11px;color:#B0A898;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px;">
+                Retroalimentaci&oacute;n detallada
               </div>
-            </td></tr>
-            <tr><td style="padding:8px 24px 24px;">
-              <div style="font-size:14px;color:#d0c8b0;line-height:1.8;">
+              <div style="height:1px;background:#EDE8E0;margin-bottom:20px;"></div>
+              <div style="font-size:15px;color:#2C2C2C;line-height:1.85;">
                 ${textToHtml(feedback)}
               </div>
             </td></tr>
@@ -205,9 +205,10 @@ export function buildFeedbackHtml(
         </td></tr>
 
         <!-- FOOTER -->
-        <tr><td style="padding:16px 0;border-top:1px dashed #2a2418;">
-          <div style="font-size:11px;color:#4a4030;text-align:center;letter-spacing:2px;">
-            IELTS / DAILY &mdash; EVERY PRACTICE MAKES YOU STRONGER
+        <tr><td style="padding:16px 0;">
+          <div style="height:1px;background:linear-gradient(to right, transparent, #D5CFC5, transparent);margin-bottom:16px;"></div>
+          <div style="font-size:12px;color:#B0A898;text-align:center;font-style:italic;">
+            IELTS Daily &mdash; Cada pr&aacute;ctica te hace m&aacute;s fuerte
           </div>
         </td></tr>
 
