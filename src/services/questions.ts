@@ -70,6 +70,34 @@ export async function generateQuestions(
   };
 }
 
+// Generate IELTS Writing Task 2 prompt from an article
+export async function generateWritingPrompt(
+  article: Article
+): Promise<string> {
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 500,
+    system: `You create IELTS Writing Task 2 prompts. The prompt should be inspired by the article's theme but should be a general opinion/discussion question, not about the article itself. Use clear, simple English.`,
+    messages: [
+      {
+        role: "user",
+        content: `Based on the theme of this article, create ONE IELTS Writing Task 2 prompt.
+
+ARTICLE: "${article.title}"
+TOPIC: ${article.content.slice(0, 300)}
+
+Format:
+- Start with a 1-2 sentence context statement
+- Then the question (e.g., "To what extent do you agree or disagree?")
+- Add: "Write at least 250 words."
+- Keep it to ONE prompt only.`,
+      },
+    ],
+  });
+
+  return response.content[0].type === "text" ? response.content[0].text.trim() : "";
+}
+
 // Evaluate user answers against the answer key
 export async function evaluateAnswers(
   questions: string,
@@ -114,6 +142,46 @@ Keep the tone warm and motivating. Use simple, clear English.`,
   // Extract score from the response
   const scoreMatch = text.match(/(\d+)\s*\/\s*(\d+)/);
   const score = scoreMatch ? `${scoreMatch[1]}/${scoreMatch[2]}` : "See feedback";
+
+  return { score, feedback: text };
+}
+
+// Evaluate IELTS writing submission
+export async function evaluateWriting(
+  prompt: string,
+  userEssay: string,
+  userName: string
+): Promise<{ score: string; feedback: string }> {
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 1500,
+    system: `You are an IELTS Writing Task 2 examiner. Score using the 4 official criteria: Task Response, Coherence & Cohesion, Lexical Resource, Grammatical Range & Accuracy. Each 0-9. Give an overall band score. Be encouraging but honest. Use simple English for feedback.`,
+    messages: [
+      {
+        role: "user",
+        content: `Student: ${userName}
+
+WRITING PROMPT:
+${prompt}
+
+STUDENT'S ESSAY:
+${userEssay}
+
+Provide:
+1. BAND SCORE: X.X/9 (overall)
+2. CRITERIA SCORES (brief, one line each)
+3. STRENGTHS (2-3 specific things done well)
+4. AREAS TO IMPROVE (2-3 specific tips with examples from their essay)
+5. OVERALL COMMENT (encouraging, 2-3 sentences)
+
+Word count: ${userEssay.split(/\s+/).length} words.`,
+      },
+    ],
+  });
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  const scoreMatch = text.match(/(\d+\.?\d?)\s*\/\s*9/);
+  const score = scoreMatch ? `${scoreMatch[1]}/9` : "See feedback";
 
   return { score, feedback: text };
 }

@@ -9,11 +9,15 @@ mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const db = new Database(DB_PATH);
 db.pragma("journal_mode = WAL");
 
-// --- Migration: drop old tables from previous architecture ---
+// --- Migration ---
 db.exec(`DROP TABLE IF EXISTS feedback_log`);
-try { db.exec(`ALTER TABLE email_log ADD COLUMN practice_id INTEGER`); } catch { /* already exists or new table */ }
-// If the old email_log has incompatible schema, just recreate it
 try { db.prepare("SELECT practice_id FROM email_log LIMIT 1").get(); } catch { db.exec("DROP TABLE IF EXISTS email_log"); }
+// Add slot column to daily_practices if missing
+try { db.prepare("SELECT slot FROM daily_practices LIMIT 1").get(); } catch {
+  try { db.exec("ALTER TABLE daily_practices ADD COLUMN slot TEXT NOT NULL DEFAULT 'reading'"); } catch { /* table doesn't exist yet */ }
+}
+// Drop UNIQUE(date) by rebuilding table if needed (only on first run with new schema)
+// We can't drop constraints in SQLite, so we allow INSERT OR IGNORE to handle dupes
 
 // --- Schema ---
 db.exec(`
@@ -27,8 +31,9 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS daily_practices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT UNIQUE NOT NULL,
+    date TEXT NOT NULL,
     type TEXT NOT NULL DEFAULT 'reading',
+    slot TEXT NOT NULL DEFAULT 'reading',
     article_title TEXT,
     article_source TEXT,
     article_url TEXT,
@@ -104,6 +109,7 @@ export interface DailyPractice {
   id: number;
   date: string;
   type: string;
+  slot: string;
   article_title: string | null;
   article_source: string | null;
   article_url: string | null;
@@ -114,14 +120,33 @@ export interface DailyPractice {
   created_at: string;
 }
 
-export function getTodaysPractice(): DailyPractice | undefined {
+export function getTodaysPractices(): DailyPractice[] {
   const today = new Date().toISOString().slice(0, 10);
-  return db.prepare("SELECT * FROM daily_practices WHERE date = ?").get(today) as DailyPractice | undefined;
+  return db.prepare("SELECT * FROM daily_practices WHERE date = ? ORDER BY slot").all(today) as DailyPractice[];
+}
+
+export function getTodaysPracticeBySlot(slot: string): DailyPractice | undefined {
+  const today = new Date().toISOString().slice(0, 10);
+  return db.prepare("SELECT * FROM daily_practices WHERE date = ? AND slot = ?").get(today, slot) as DailyPractice | undefined;
+}
+
+export function getPracticeById(id: number): DailyPractice | undefined {
+  return db.prepare("SELECT * FROM daily_practices WHERE id = ?").get(id) as DailyPractice | undefined;
+}
+
+export function getPracticeByDate(date: string): DailyPractice | undefined {
+  return db.prepare("SELECT * FROM daily_practices WHERE date = ? AND slot = 'reading' LIMIT 1").get(date) as DailyPractice | undefined;
+}
+
+// Keep backwards compat
+export function getTodaysPractice(): DailyPractice | undefined {
+  return getTodaysPracticeBySlot("reading");
 }
 
 export function createDailyPractice(data: {
   date: string;
   type: string;
+  slot: string;
   article_title?: string;
   article_source?: string;
   article_url?: string;
@@ -130,16 +155,32 @@ export function createDailyPractice(data: {
   answer_key?: string;
   writing_prompt?: string;
 }): DailyPractice {
-  db.prepare(
-    `INSERT OR IGNORE INTO daily_practices (date, type, article_title, article_source, article_url, passage, questions, answer_key, writing_prompt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  const existing = db.prepare(
+    "SELECT * FROM daily_practices WHERE date = ? AND slot = ?"
+  ).get(data.date, data.slot) as DailyPractice | undefined;
+  if (existing) return existing;
+
+  const result = db.prepare(
+    `INSERT INTO daily_practices (date, type, slot, article_title, article_source, article_url, passage, questions, answer_key, writing_prompt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
-    data.date, data.type,
+    data.date, data.type, data.slot,
     data.article_title || null, data.article_source || null, data.article_url || null,
     data.passage || null, data.questions || null, data.answer_key || null,
     data.writing_prompt || null
   );
-  return db.prepare("SELECT * FROM daily_practices WHERE date = ?").get(data.date) as DailyPractice;
+  return db.prepare("SELECT * FROM daily_practices WHERE id = ?").get(result.lastInsertRowid) as DailyPractice;
+}
+
+export function deleteTodaysPractices(): void {
+  const today = new Date().toISOString().slice(0, 10);
+  db.prepare("DELETE FROM submissions WHERE practice_id IN (SELECT id FROM daily_practices WHERE date = ?)").run(today);
+  db.prepare("DELETE FROM daily_practices WHERE date = ?").run(today);
+}
+
+// Keep old name as alias
+export function deleteTodaysPractice(): void {
+  deleteTodaysPractices();
 }
 
 // --- Submissions ---
@@ -179,12 +220,11 @@ export interface ActivityDay {
 }
 
 export function getActivityData(userId: number, days = 182): ActivityDay[] {
-  // Get all submissions for this user in the last N days
   const rows = db.prepare(`
     SELECT dp.date, s.score, 1 as submitted
     FROM daily_practices dp
     LEFT JOIN submissions s ON s.practice_id = dp.id AND s.user_id = ?
-    WHERE dp.date >= date('now', '-' || ? || ' days')
+    WHERE dp.date >= date('now', '-' || ? || ' days') AND dp.slot = 'reading'
     ORDER BY dp.date ASC
   `).all(userId, days) as Array<{ date: string; score: string | null; submitted: number }>;
 
@@ -197,7 +237,7 @@ export function getActivityData(userId: number, days = 182): ActivityDay[] {
 
 export function getCurrentStreak(userId: number): number {
   const rows = db.prepare(`
-    SELECT dp.date FROM daily_practices dp
+    SELECT DISTINCT dp.date FROM daily_practices dp
     JOIN submissions s ON s.practice_id = dp.id AND s.user_id = ?
     WHERE s.score IS NOT NULL
     ORDER BY dp.date DESC
@@ -213,40 +253,26 @@ export function getCurrentStreak(userId: number): number {
     const expected = new Date(today);
     expected.setDate(expected.getDate() - i);
     const expectedStr = expected.toISOString().slice(0, 10);
-
-    if (rows[i].date === expectedStr) {
-      streak++;
-    } else {
-      break;
-    }
+    if (rows[i].date === expectedStr) streak++;
+    else break;
   }
   return streak;
 }
 
 export function getLongestStreak(userId: number): number {
   const rows = db.prepare(`
-    SELECT dp.date FROM daily_practices dp
+    SELECT DISTINCT dp.date FROM daily_practices dp
     JOIN submissions s ON s.practice_id = dp.id AND s.user_id = ?
     WHERE s.score IS NOT NULL
     ORDER BY dp.date ASC
   `).all(userId) as Array<{ date: string }>;
 
   if (rows.length === 0) return 0;
-
-  let longest = 1;
-  let current = 1;
-
+  let longest = 1, current = 1;
   for (let i = 1; i < rows.length; i++) {
-    const prev = new Date(rows[i - 1].date);
-    const curr = new Date(rows[i].date);
-    const diff = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
-
-    if (diff === 1) {
-      current++;
-      longest = Math.max(longest, current);
-    } else {
-      current = 1;
-    }
+    const diff = (new Date(rows[i].date).getTime() - new Date(rows[i - 1].date).getTime()) / 86400000;
+    if (diff === 1) { current++; longest = Math.max(longest, current); }
+    else current = 1;
   }
   return longest;
 }
@@ -264,32 +290,28 @@ export function getRecentSubmissions(userId: number, limit = 20): Array<Submissi
     FROM submissions s
     JOIN daily_practices dp ON dp.id = s.practice_id
     WHERE s.user_id = ? AND s.score IS NOT NULL
-    ORDER BY s.submitted_at DESC
-    LIMIT ?
+    ORDER BY s.submitted_at DESC LIMIT ?
   `).all(userId, limit) as any[];
 }
 
 // --- Newspaper queries ---
 
-export function getRecentPractices(limit = 10): DailyPractice[] {
-  return db.prepare(
-    "SELECT * FROM daily_practices ORDER BY date DESC LIMIT ?"
-  ).all(limit) as DailyPractice[];
-}
-
-export function getPracticeByDate(date: string): DailyPractice | undefined {
-  return db.prepare("SELECT * FROM daily_practices WHERE date = ?").get(date) as DailyPractice | undefined;
-}
-
-export function deleteTodaysPractice(): void {
-  const today = new Date().toISOString().slice(0, 10);
-  db.prepare("DELETE FROM submissions WHERE practice_id IN (SELECT id FROM daily_practices WHERE date = ?)").run(today);
-  db.prepare("DELETE FROM daily_practices WHERE date = ?").run(today);
-}
-
 export interface PracticeWithStatus extends DailyPractice {
   completed: boolean;
   score: string | null;
+}
+
+export function getTodaysPracticesWithStatus(userId: number): PracticeWithStatus[] {
+  const today = new Date().toISOString().slice(0, 10);
+  return db.prepare(`
+    SELECT dp.*,
+      CASE WHEN s.score IS NOT NULL THEN 1 ELSE 0 END as completed,
+      s.score
+    FROM daily_practices dp
+    LEFT JOIN submissions s ON s.practice_id = dp.id AND s.user_id = ?
+    WHERE dp.date = ?
+    ORDER BY dp.slot
+  `).all(userId, today) as any[];
 }
 
 export function getRecentPracticesWithStatus(userId: number, limit = 10): PracticeWithStatus[] {
@@ -299,12 +321,12 @@ export function getRecentPracticesWithStatus(userId: number, limit = 10): Practi
       s.score
     FROM daily_practices dp
     LEFT JOIN submissions s ON s.practice_id = dp.id AND s.user_id = ?
-    ORDER BY dp.date DESC
-    LIMIT ?
+    WHERE dp.slot = 'reading'
+    ORDER BY dp.date DESC LIMIT ?
   `).all(userId, limit) as any[];
 }
 
-// --- Settings (keep as-is) ---
+// --- Settings ---
 
 const DEFAULT_SETTINGS: Record<string, string> = {
   recipients: process.env.RECIPIENTS || "posemerani@gmail.com,npizarrocatalan@gmail.com",
@@ -329,7 +351,7 @@ export function getAllSettings(): Record<string, string> {
   return result;
 }
 
-// --- Email Log (simplified) ---
+// --- Email Log ---
 
 export function logEmail(practiceId: number, recipients: string, status: string, error?: string, durationMs?: number): void {
   db.prepare(

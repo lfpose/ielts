@@ -88,7 +88,9 @@ export function renderPracticePage(
       <span><a href="/s/${esc(user.token)}" class="nav-link">&larr; Portada</a> &middot; <a href="/stats/${esc(user.token)}" class="nav-link">Estad&iacute;sticas</a></span>
     </div>
 
-    ${practice.type === "reading" ? renderReadingPractice(practice, user, existingSubmission, hasSubmitted) : ""}
+    ${practice.type === "writing"
+      ? renderWritingPractice(practice, user, existingSubmission, hasSubmitted)
+      : renderReadingPractice(practice, user, existingSubmission, hasSubmitted)}
 
     <div class="footer">&#x2727; &#x2727; &#x2727;</div>
   </div>
@@ -124,13 +126,32 @@ function renderReadingPractice(
       </div>
     </div>
 
-    ${hasSubmitted ? renderFeedback(submission!) : renderAnswerForm(user)}
+    ${hasSubmitted ? renderFeedback(submission!) : renderAnswerForm(user, practice.id)}
   `;
 }
 
-function renderAnswerForm(user: User): string {
+function renderWritingPractice(
+  practice: DailyPractice,
+  user: User,
+  submission: Submission | null,
+  hasSubmitted: boolean
+): string {
   return `
-    <form method="POST" action="/practice/${esc(user.token)}">
+    <div class="section">
+      <div class="section-head">Escritura / Writing Task 2</div>
+      <div class="section-body">
+        <div class="question-block">
+          ${practice.writing_prompt ? nl2p(practice.writing_prompt) : ""}
+        </div>
+      </div>
+    </div>
+    ${hasSubmitted ? renderFeedback(submission!) : renderWritingForm(user, practice.id)}
+  `;
+}
+
+function renderAnswerForm(user: User, practiceId: number): string {
+  return `
+    <form method="POST" action="/practice/${esc(user.token)}?id=${practiceId}">
       <div class="section">
         <div class="section-head">Tus Respuestas</div>
         <div class="section-body">
@@ -142,6 +163,25 @@ function renderAnswerForm(user: User): string {
       </div>
       <div class="btn-row">
         <button type="submit" class="btn">Enviar Respuestas</button>
+      </div>
+    </form>
+  `;
+}
+
+function renderWritingForm(user: User, practiceId: number): string {
+  return `
+    <form method="POST" action="/practice/${esc(user.token)}?id=${practiceId}">
+      <div class="section">
+        <div class="section-head">Tu Ensayo</div>
+        <div class="section-body">
+          <p style="font-style:italic;color:var(--n500);font-size:14px;margin-bottom:16px;text-align:left;">
+            Escribe al menos 250 palabras. Organiza tu ensayo con introducci&oacute;n, cuerpo y conclusi&oacute;n.
+          </p>
+          <textarea name="answers" placeholder="In today's world..." required style="min-height:320px"></textarea>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="btn">Enviar Ensayo</button>
       </div>
     </form>
   `;

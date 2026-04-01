@@ -3,6 +3,8 @@ import { basicAuth } from "hono/basic-auth";
 import {
   getUserByToken,
   getTodaysPractice,
+  getTodaysPracticesWithStatus,
+  getPracticeById,
   getPracticeByDate,
   getSubmission,
   createSubmission,
@@ -20,7 +22,7 @@ import {
   getEmailStats,
   getAllUsers,
 } from "./db.js";
-import { evaluateAnswers } from "./services/questions.js";
+import { evaluateAnswers, evaluateWriting } from "./services/questions.js";
 import { renderPracticePage, renderNoPracticePage } from "./templates/practice.js";
 import { renderStatsPage } from "./templates/stats.js";
 import { renderNewspaper } from "./templates/newspaper.js";
@@ -41,20 +43,24 @@ app.get("/s/:token", (c) => {
   const user = getUserByToken(c.req.param("token"));
   if (!user) return c.text("Invalid link.", 404);
 
-  const practices = getRecentPracticesWithStatus(user.id, 10);
+  const todayPractices = getTodaysPracticesWithStatus(user.id);
+  const archive = getRecentPracticesWithStatus(user.id, 10);
   const streak = getCurrentStreak(user.id);
+  const longest = getLongestStreak(user.id);
   const total = getTotalSubmissions(user.id);
+  const activity = getActivityData(user.id);
 
-  return c.html(renderNewspaper(user, practices, streak, total));
+  return c.html(renderNewspaper(user, todayPractices, archive, streak, longest, total, activity));
 });
 
-// Practice page (supports ?date= for past practices)
+// Practice page (supports ?id= for specific practice, ?date= for legacy)
 app.get("/practice/:token", async (c) => {
   const user = getUserByToken(c.req.param("token"));
   if (!user) return c.text("Invalid link.", 404);
 
+  const idParam = c.req.query("id");
   const dateParam = c.req.query("date");
-  const practice = dateParam ? getPracticeByDate(dateParam) : getTodaysPractice();
+  const practice = idParam ? getPracticeById(Number(idParam)) : dateParam ? getPracticeByDate(dateParam) : getTodaysPractice();
   if (!practice) return c.html(renderNoPracticePage(user));
 
   const existing = getSubmission(user.id, practice.id) ?? null;
@@ -66,11 +72,11 @@ app.post("/practice/:token", async (c) => {
   const user = getUserByToken(c.req.param("token"));
   if (!user) return c.text("Invalid link.", 404);
 
+  const idParam = c.req.query("id");
   const dateParam = c.req.query("date");
-  const practice = dateParam ? getPracticeByDate(dateParam) : getTodaysPractice();
+  const practice = idParam ? getPracticeById(Number(idParam)) : dateParam ? getPracticeByDate(dateParam) : getTodaysPractice();
   if (!practice) return c.text("No practice available.", 404);
 
-  // Check if already submitted
   const existing = getSubmission(user.id, practice.id);
   if (existing?.score) {
     return c.html(renderPracticePage(user, practice, existing));
@@ -78,19 +84,17 @@ app.post("/practice/:token", async (c) => {
 
   const body = await c.req.parseBody();
   const answers = typeof body.answers === "string" ? body.answers.trim() : "";
-  if (!answers) return c.redirect(`/practice/${user.token}`);
+  if (!answers) return c.redirect(`/practice/${user.token}?id=${practice.id}`);
 
-  // Create submission
   const subId = createSubmission(user.id, practice.id, answers);
 
-  // Evaluate with Claude
   try {
-    const result = await evaluateAnswers(
-      practice.questions || "",
-      practice.answer_key || "",
-      answers,
-      user.name
-    );
+    let result;
+    if (practice.type === "writing") {
+      result = await evaluateWriting(practice.writing_prompt || "", answers, user.name);
+    } else {
+      result = await evaluateAnswers(practice.questions || "", practice.answer_key || "", answers, user.name);
+    }
     updateSubmissionFeedback(subId, result.score, result.feedback);
   } catch (err) {
     console.error("Evaluation failed:", err);
