@@ -85,7 +85,7 @@ export function renderPracticePage(
 
     <div class="meta-bar">
       <span>Hola, ${esc(user.name)}</span>
-      <a href="/stats/${esc(user.token)}" class="nav-link">Mis Estad&iacute;sticas &rarr;</a>
+      <span><a href="/s/${esc(user.token)}" class="nav-link">&larr; Portada</a> &middot; <a href="/stats/${esc(user.token)}" class="nav-link">Estad&iacute;sticas</a></span>
     </div>
 
     ${practice.type === "reading" ? renderReadingPractice(practice, user, existingSubmission, hasSubmitted) : ""}
@@ -174,7 +174,7 @@ export function renderNoPracticePage(user: User): string {
     </header>
     <div class="meta-bar">
       <span>Hola, ${esc(user.name)}</span>
-      <a href="/stats/${esc(user.token)}" class="nav-link">Mis Estad&iacute;sticas &rarr;</a>
+      <span><a href="/s/${esc(user.token)}" class="nav-link">&larr; Portada</a> &middot; <a href="/stats/${esc(user.token)}" class="nav-link">Estad&iacute;sticas</a></span>
     </div>
     <div class="done-msg">
       No hay pr&aacute;ctica disponible hoy todav&iacute;a.<br>

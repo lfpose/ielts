@@ -269,6 +269,41 @@ export function getRecentSubmissions(userId: number, limit = 20): Array<Submissi
   `).all(userId, limit) as any[];
 }
 
+// --- Newspaper queries ---
+
+export function getRecentPractices(limit = 10): DailyPractice[] {
+  return db.prepare(
+    "SELECT * FROM daily_practices ORDER BY date DESC LIMIT ?"
+  ).all(limit) as DailyPractice[];
+}
+
+export function getPracticeByDate(date: string): DailyPractice | undefined {
+  return db.prepare("SELECT * FROM daily_practices WHERE date = ?").get(date) as DailyPractice | undefined;
+}
+
+export function deleteTodaysPractice(): void {
+  const today = new Date().toISOString().slice(0, 10);
+  db.prepare("DELETE FROM submissions WHERE practice_id IN (SELECT id FROM daily_practices WHERE date = ?)").run(today);
+  db.prepare("DELETE FROM daily_practices WHERE date = ?").run(today);
+}
+
+export interface PracticeWithStatus extends DailyPractice {
+  completed: boolean;
+  score: string | null;
+}
+
+export function getRecentPracticesWithStatus(userId: number, limit = 10): PracticeWithStatus[] {
+  return db.prepare(`
+    SELECT dp.*,
+      CASE WHEN s.score IS NOT NULL THEN 1 ELSE 0 END as completed,
+      s.score
+    FROM daily_practices dp
+    LEFT JOIN submissions s ON s.practice_id = dp.id AND s.user_id = ?
+    ORDER BY dp.date DESC
+    LIMIT ?
+  `).all(userId, limit) as any[];
+}
+
 // --- Settings (keep as-is) ---
 
 const DEFAULT_SETTINGS: Record<string, string> = {

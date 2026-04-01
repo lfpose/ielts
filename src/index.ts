@@ -58,7 +58,7 @@ export async function runDailyJob() {
     const sentTo: string[] = [];
     for (const user of users) {
       try {
-        const practiceUrl = `${BASE_URL}/practice/${user.token}`;
+        const practiceUrl = `${BASE_URL}/s/${user.token}`;
         await sendInviteEmail(user.email, user.name, practiceUrl, practice.article_title || "Today's Practice");
         sentTo.push(user.email);
         console.log(`Invite sent to ${user.email}`);

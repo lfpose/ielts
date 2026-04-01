@@ -179,7 +179,7 @@ export function renderStatsPage(
 
     <div class="meta-bar">
       <span>${esc(user.name)} &middot; ${esc(user.email)}</span>
-      <a href="/practice/${esc(user.token)}">Pr&aacute;ctica de Hoy &rarr;</a>
+      <span><a href="/s/${esc(user.token)}">&larr; Portada</a> &middot; <a href="/practice/${esc(user.token)}">Pr&aacute;ctica de Hoy</a></span>
     </div>
 
     <!-- STREAK STATS -->

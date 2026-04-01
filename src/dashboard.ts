@@ -3,6 +3,7 @@ import { basicAuth } from "hono/basic-auth";
 import {
   getUserByToken,
   getTodaysPractice,
+  getPracticeByDate,
   getSubmission,
   createSubmission,
   updateSubmissionFeedback,
@@ -11,6 +12,8 @@ import {
   getLongestStreak,
   getTotalSubmissions,
   getRecentSubmissions,
+  getRecentPracticesWithStatus,
+  deleteTodaysPractice,
   getAllSettings,
   setSetting,
   getRecentEmailLogs,
@@ -20,6 +23,7 @@ import {
 import { evaluateAnswers } from "./services/questions.js";
 import { renderPracticePage, renderNoPracticePage } from "./templates/practice.js";
 import { renderStatsPage } from "./templates/stats.js";
+import { renderNewspaper } from "./templates/newspaper.js";
 import { runDailyJob } from "./index.js";
 
 const DASH_USER = process.env.DASH_USER || "admin";
@@ -32,12 +36,25 @@ const app = new Hono();
 // PUBLIC ROUTES (no auth needed)
 // ==============================
 
-// Practice page
+// Student newspaper homepage
+app.get("/s/:token", (c) => {
+  const user = getUserByToken(c.req.param("token"));
+  if (!user) return c.text("Invalid link.", 404);
+
+  const practices = getRecentPracticesWithStatus(user.id, 10);
+  const streak = getCurrentStreak(user.id);
+  const total = getTotalSubmissions(user.id);
+
+  return c.html(renderNewspaper(user, practices, streak, total));
+});
+
+// Practice page (supports ?date= for past practices)
 app.get("/practice/:token", async (c) => {
   const user = getUserByToken(c.req.param("token"));
   if (!user) return c.text("Invalid link.", 404);
 
-  const practice = getTodaysPractice();
+  const dateParam = c.req.query("date");
+  const practice = dateParam ? getPracticeByDate(dateParam) : getTodaysPractice();
   if (!practice) return c.html(renderNoPracticePage(user));
 
   const existing = getSubmission(user.id, practice.id) ?? null;
@@ -49,7 +66,8 @@ app.post("/practice/:token", async (c) => {
   const user = getUserByToken(c.req.param("token"));
   if (!user) return c.text("Invalid link.", 404);
 
-  const practice = getTodaysPractice();
+  const dateParam = c.req.query("date");
+  const practice = dateParam ? getPracticeByDate(dateParam) : getTodaysPractice();
   if (!practice) return c.text("No practice available.", 404);
 
   // Check if already submitted
@@ -114,6 +132,12 @@ app.get("/", (c) => {
 
 app.post("/trigger", async (c) => {
   runDailyJob().catch((err) => console.error("Manual trigger failed:", err));
+  return c.redirect("/");
+});
+
+app.post("/refresh", async (c) => {
+  deleteTodaysPractice();
+  runDailyJob().catch((err) => console.error("Refresh failed:", err));
   return c.redirect("/");
 });
 
@@ -240,6 +264,9 @@ function renderAdminDashboard(
       <div class="toolbar-left">Dashboard</div>
       <div class="toolbar-right">
         <button class="btn-icon" onclick="toggleTheme()" title="Toggle dark mode" id="themeBtn"></button>
+        <form method="POST" action="/refresh" style="display:inline" onsubmit="this.querySelector('button').textContent='REFRESHING\u2026'">
+          <button type="submit" class="btn-outline" style="margin-right:4px">Refresh Article</button>
+        </form>
         <form method="POST" action="/trigger" style="display:inline" onsubmit="this.querySelector('button').textContent='SENDING\u2026'">
           <button type="submit" class="btn-primary">Send Now</button>
         </form>
