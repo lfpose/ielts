@@ -135,6 +135,7 @@ export function renderLongReading(
     .passage{margin-bottom:32px}
     .passage p{font-family:'Lora',Georgia,serif;font-size:16px;line-height:1.7;text-align:justify;margin-bottom:16px}
     .passage p:last-child{margin-bottom:0}
+    .passage p:first-child::first-letter{font-family:'Playfair Display',serif;font-weight:900;float:left;font-size:3.6em;line-height:0.8;padding-right:8px;padding-top:4px;color:var(--fg)}
 
     /* DIVIDER */
     .divider{border:none;border-top:2px solid var(--fg);margin:32px 0}
