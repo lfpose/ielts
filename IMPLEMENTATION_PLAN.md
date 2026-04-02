@@ -1,7 +1,7 @@
 # Implementation Plan — IELTS Daily
 
 Generated: 2026-04-02
-Status: 7 of 18 tasks complete
+Status: 8 of 18 tasks complete
 
 ## Summary
 
@@ -135,7 +135,7 @@ The current app has working infrastructure (Hono, SQLite, cron, email, Fly.io de
 ---
 
 ### [P3-1] Dashboard Template
-- **Status**: NOT STARTED
+- **Status**: DONE (2026-04-02)
 - **Description**: Create `src/templates/dashboard.ts` rendering the daily board as a newspaper-style page. Shows: masthead ("The IELTS Daily"), date, streak display, daily progress bar (X/5 completados), 5 exercise cards in order (each showing type label, title/excerpt, status: "Disponible" or score badge), activity heatmap (16 weeks), archive section (last 10 boards with completion status like "3/5"). Each exercise card links to `/s/:token/exercise/:exerciseId`. Delete old `src/templates/newspaper.ts`. Follow design spec: Playfair Display headings, Lora body, Inter UI, warm off-white palette, dark mode support.
 - **Acceptance Criteria**:
   - [ ] Shows 5 exercise cards with correct type labels: Lectura Larga, Lectura Corta, Vocabulario, Completar Espacios, Escritura
