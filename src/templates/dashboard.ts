@@ -124,6 +124,14 @@ function renderMasonryCard(ex: ExerciseWithStatus, token: string): string {
   </a>`;
 }
 
+function renderIllustrationCard(illustration: string | null): string {
+  if (!illustration) return "";
+  return `<div class="m-card card-illus">
+    <div class="card-kicker">Ilustraci&oacute;n del D&iacute;a</div>
+    <pre class="illus-art">${esc(illustration)}</pre>
+  </div>`;
+}
+
 function renderExerciseCards(board: BoardWithStatus, token: string): string {
   return board.exercises.map((ex) => renderMasonryCard(ex, token)).join("");
 }
@@ -244,6 +252,10 @@ export function renderDashboard(
     .card-badge{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;padding:3px 8px}
     .card-badge.avail{color:var(--red);border:1px solid var(--red)}
     .card-badge.done{color:var(--correct);border:1px solid var(--correct);font-family:'JetBrains Mono',monospace}
+    /* Illustration card */
+    .card-illus{break-inside:avoid;padding:16px;border:1px solid var(--muted);margin-bottom:16px}
+    .illus-art{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.3;white-space:pre;overflow-x:auto;color:var(--fg);margin:0}
+
     /* Card sizes — large gets more excerpt lines */
     .card-lg .card-excerpt{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
     .card-md .card-excerpt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -332,7 +344,7 @@ export function renderDashboard(
         todaysBoard
           ? `<div class="today-topic">${esc(todaysBoard.board.topic)}</div>
              ${renderProgressBar(todaysBoard)}
-             <div class="masonry">${renderExerciseCards(todaysBoard, user.token)}</div>`
+             <div class="masonry">${renderExerciseCards(todaysBoard, user.token)}${renderIllustrationCard(todaysBoard.board.illustration)}</div>`
           : `<div class="no-board">
                <div class="title">Sin tablero todav&iacute;a</div>
                <p>Los ejercicios de hoy se generar&aacute;n pronto. Vuelve m&aacute;s tarde.</p>

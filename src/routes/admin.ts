@@ -111,7 +111,7 @@ app.post("/generate", async (c) => {
 
   try {
     const generated = await generateBoard(topic);
-    const board = createBoard(today, topic);
+    const board = createBoard(today, topic, generated.illustration);
     for (let i = 0; i < generated.exercises.length; i++) {
       const ex = generated.exercises[i];
       createExercise({
@@ -155,7 +155,7 @@ app.post("/regenerate", async (c) => {
 
   try {
     const generated = await generateBoard(topic);
-    const board = createBoard(today, topic);
+    const board = createBoard(today, topic, generated.illustration);
     for (let i = 0; i < generated.exercises.length; i++) {
       const ex = generated.exercises[i];
       createExercise({

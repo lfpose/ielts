@@ -68,6 +68,7 @@ export interface WritingMicroContent {
 
 export interface GeneratedBoard {
   topic: string;
+  illustration: string;
   exercises: [
     { type: "long_reading"; content: LongReadingContent; max_score: 5 },
     { type: "short_reading"; content: ShortReadingContent; max_score: 2 },
@@ -108,11 +109,12 @@ export async function generateBoard(
   // Generate long reading first (vocabulary depends on it)
   const longReading = await generateLongReading(topic, difficulty);
 
-  // Generate short reading, vocabulary, and writing in parallel
-  const [shortReading, vocabulary, writingMicro] = await Promise.all([
+  // Generate short reading, vocabulary, writing, and illustration in parallel
+  const [shortReading, vocabulary, writingMicro, illustration] = await Promise.all([
     generateShortReading(topic, difficulty),
     generateVocabulary(longReading),
     generateWritingMicro(topic),
+    generateIllustration(topic),
   ]);
 
   // Fill gap needs word bank context
@@ -121,6 +123,7 @@ export async function generateBoard(
 
   return {
     topic,
+    illustration,
     exercises: [
       { type: "long_reading", content: longReading, max_score: 5 },
       { type: "short_reading", content: shortReading, max_score: 2 },
@@ -413,4 +416,31 @@ Important: Return ONLY the JSON object, no other text.`,
 
   const text = response.content[0].type === "text" ? response.content[0].text : "";
   return extractJSON<WritingMicroContent>(text);
+}
+
+export async function generateIllustration(topic: string): Promise<string> {
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1000,
+    messages: [
+      {
+        role: "user",
+        content: `Create a simple ASCII art illustration for the topic: "${topic}".
+
+Requirements:
+- Width: 30-40 characters per line
+- Height: 15-20 lines
+- Use simple block characters, dots, slashes, and basic ASCII to create a recognizable silhouette or outline
+- Keep it simple — think: outline of an animal, a landscape, a building, a simple object
+- No text labels inside the art
+- The illustration should be immediately recognizable as related to the topic
+
+Return ONLY the ASCII art, nothing else. No code blocks, no explanation, just the raw ASCII lines.`,
+      },
+    ],
+  });
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  // Clean up: remove any code block markers if present
+  return text.replace(/^```[a-z]*\n?/gm, "").replace(/\n?```$/gm, "").trim();
 }

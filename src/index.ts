@@ -53,7 +53,7 @@ export async function runDailyJob() {
   if (!generated) return;
 
   // 4. Save board + exercises to DB
-  const board = createBoard(today, topic);
+  const board = createBoard(today, topic, generated.illustration);
   for (let i = 0; i < generated.exercises.length; i++) {
     const ex = generated.exercises[i];
     createExercise({

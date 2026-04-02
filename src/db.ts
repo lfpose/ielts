@@ -126,6 +126,13 @@ db.exec(`
   );
 `);
 
+// --- Migration: Add illustration column to boards ---
+try {
+  db.prepare("SELECT illustration FROM boards LIMIT 0").run();
+} catch {
+  db.exec("ALTER TABLE boards ADD COLUMN illustration TEXT");
+}
+
 // --- Pre-populate topic_queue with 20 topics from specs/content-pipeline.md ---
 const INITIAL_TOPICS = [
   "Dinosaurs and prehistoric life",
@@ -189,6 +196,7 @@ export interface Board {
   id: number;
   date: string;
   topic: string;
+  illustration: string | null;
   created_at: string;
 }
 
@@ -314,10 +322,10 @@ export function getTodaysBoard(): Board | undefined {
   return getBoardByDate(today);
 }
 
-export function createBoard(date: string, topic: string): Board {
+export function createBoard(date: string, topic: string, illustration?: string): Board {
   const existing = getBoardByDate(date);
   if (existing) return existing;
-  const result = db.prepare("INSERT INTO boards (date, topic) VALUES (?, ?)").run(date, topic);
+  const result = db.prepare("INSERT INTO boards (date, topic, illustration) VALUES (?, ?, ?)").run(date, topic, illustration || null);
   return db.prepare("SELECT * FROM boards WHERE id = ?").get(result.lastInsertRowid) as Board;
 }
 
