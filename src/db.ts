@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import crypto from "crypto";
 import path from "path";
 import { mkdirSync } from "fs";
-import { SEED_WORDS } from "./word-bank-seed";
+import { SEED_WORDS } from "./word-bank-seed.js";
 
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "data", "ielts.db");
 mkdirSync(path.dirname(DB_PATH), { recursive: true });
