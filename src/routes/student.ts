@@ -9,10 +9,14 @@ import {
   getCurrentStreak,
   getLongestStreak,
   getRecentBoardsWithStatus,
+  getTotalSubmissions,
+  getTotalBoardsCompleted,
+  getRecentSubmissionsWithType,
   type User,
   type ExerciseType,
 } from "../db.js";
 import { renderDashboard } from "../templates/dashboard.js";
+import { renderStatsPage } from "../templates/stats.js";
 import { renderLongReading } from "../templates/exercise-long-reading.js";
 import { renderShortReading } from "../templates/exercise-short-reading.js";
 import { renderVocabulary } from "../templates/exercise-vocabulary.js";
@@ -59,6 +63,22 @@ app.get("/:token", (c) => {
   const recentBoards = getRecentBoardsWithStatus(user.id);
 
   const html = renderDashboard(user, todaysBoard, activityData, currentStreak, longestStreak, recentBoards);
+  return c.html(html);
+});
+
+// Stats page
+app.get("/:token/stats", (c) => {
+  const user = resolveUser(c.req.param("token"));
+  if (!user) return c.text("Invalid link.", 404);
+
+  const activityData = getActivityData(user.id);
+  const currentStreak = getCurrentStreak(user.id);
+  const longestStreak = getLongestStreak(user.id);
+  const totalExercises = getTotalSubmissions(user.id);
+  const totalBoards = getTotalBoardsCompleted(user.id);
+  const recentSubmissions = getRecentSubmissionsWithType(user.id, 20);
+
+  const html = renderStatsPage(user, activityData, currentStreak, longestStreak, totalExercises, totalBoards, recentSubmissions);
   return c.html(html);
 });
 

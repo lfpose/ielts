@@ -1,26 +1,32 @@
-import type { User, ActivityDay, Submission } from "../db.js";
+import type { User, ActivityDay, ExerciseType, RecentSubmissionRow } from "../db.js";
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+const EXERCISE_LABELS: Record<ExerciseType, string> = {
+  long_reading: "Lectura Larga",
+  short_reading: "Lectura Corta",
+  vocabulary: "Vocabulario",
+  fill_gap: "Completar",
+  writing_micro: "Escritura",
+};
+
 function buildHeatmap(activityData: ActivityDay[]): string {
-  // Build a 26-week (6 month) × 7-day grid, like GitHub's contribution graph
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Map activity data by date for lookup
   const activityMap = new Map<string, ActivityDay>();
   for (const d of activityData) activityMap.set(d.date, d);
 
-  const weeks = 26;
+  const weeks = 16;
   const cellSize = 14;
   const cellGap = 3;
   const cellStep = cellSize + cellGap;
   const width = weeks * cellStep + 30;
   const height = 7 * cellStep + 24;
 
-  // Start from (weeks) weeks ago, aligned to Sunday
+  // Start from 16 weeks ago, aligned to Sunday
   const start = new Date(today);
   start.setDate(start.getDate() - (weeks * 7) + (7 - start.getDay()));
 
@@ -41,24 +47,24 @@ function buildHeatmap(activityData: ActivityDay[]): string {
       const y = day * cellStep + 20;
 
       let fill: string;
-      if (!activity) {
+      if (!activity || !activity.submitted) {
         fill = "var(--cell-empty)";
-      } else if (activity.submitted) {
-        // Color intensity based on score
-        const scoreNum = activity.score ?? 0;
-        if (scoreNum >= 8) fill = "var(--cell-4)";
-        else if (scoreNum >= 6) fill = "var(--cell-3)";
-        else if (scoreNum >= 4) fill = "var(--cell-2)";
-        else fill = "var(--cell-1)";
       } else {
-        fill = "var(--cell-empty)";
+        const scoreNum = activity.score ?? 0;
+        // 4 intensity levels on 0-21 scale
+        if (scoreNum >= 17) fill = "var(--cell-4)";
+        else if (scoreNum >= 9) fill = "var(--cell-3)";
+        else if (scoreNum >= 1) fill = "var(--cell-2)";
+        else fill = "var(--cell-1)";
       }
 
-      cells += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="${fill}" rx="2">
-        <title>${dateStr}${activity?.submitted ? ` — Score: ${activity.score}` : ""}</title>
+      const isToday = dateStr === today.toISOString().slice(0, 10);
+      const stroke = isToday ? ` stroke="var(--fg)" stroke-width="1.5"` : "";
+
+      cells += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="${fill}" rx="2"${stroke}>
+        <title>${dateStr}${activity?.submitted ? ` — ${activity.score}/21` : ""}</title>
       </rect>`;
 
-      // Month labels
       if (day === 0 && d.getMonth() !== lastMonth) {
         lastMonth = d.getMonth();
         monthLabels.push({ x, label: months[d.getMonth()] });
@@ -91,16 +97,17 @@ export function renderStatsPage(
   activityData: ActivityDay[],
   currentStreak: number,
   longestStreak: number,
-  totalSubmissions: number,
-  recentSubmissions: Array<Submission & { date: string; article_title: string }>
+  totalExercises: number,
+  totalBoards: number,
+  recentSubmissions: RecentSubmissionRow[]
 ): string {
   const historyRows = recentSubmissions
     .map(
       (s) => `
     <tr>
-      <td class="td mono">${s.date}</td>
-      <td class="td" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(s.article_title || "")}</td>
-      <td class="td score-cell">${s.score != null ? esc(String(s.score)) : "&mdash;"}</td>
+      <td class="td mono">${esc(s.date)}</td>
+      <td class="td"><span class="type-badge type-${esc(s.exercise_type)}">${esc(EXERCISE_LABELS[s.exercise_type] || s.exercise_type)}</span></td>
+      <td class="td score-cell">${s.score != null ? `${s.score}/${s.max_score}` : "&mdash;"}</td>
     </tr>`
     )
     .join("");
@@ -110,7 +117,7 @@ export function renderStatsPage(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IELTS Daily &mdash; Stats</title>
+  <title>IELTS Daily &mdash; Estad&iacute;sticas</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block');
     :root {
@@ -138,7 +145,7 @@ export function renderStatsPage(
     .meta-bar a{color:var(--fg);text-decoration:none;border-bottom:1px solid var(--muted);font-family:'Inter',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:2px}
     .meta-bar a:hover{border-bottom-color:var(--red)}
 
-    .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--fg);margin-bottom:24px}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--fg);margin-bottom:24px}
     .stat{padding:20px;border-right:1px solid var(--fg);text-align:center}
     .stat:last-child{border-right:none}
     .stat .label{font-family:'Inter',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--n500);margin-bottom:6px}
@@ -158,12 +165,27 @@ export function renderStatsPage(
       text-transform:uppercase;letter-spacing:2px;color:var(--n500);border-bottom:2px solid var(--fg);background:var(--n100)}
     .td{padding:10px 14px;font-size:13px;border-bottom:1px solid var(--muted);color:var(--fg)}
     .td.mono{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--n500)}
-    .score-cell{font-family:'Playfair Display',serif;font-size:16px;font-weight:700}
+    .score-cell{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500}
     tr:hover .td{background:var(--n100)}
     .empty-state{text-align:center;padding:48px;font-style:italic;color:var(--n500)}
 
+    .type-badge{font-family:'Inter',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;
+      padding:3px 8px;border-radius:3px;background:var(--n100);color:var(--n600)}
+    .type-long_reading{color:#1a5276}
+    .type-short_reading{color:#6c3483}
+    .type-vocabulary{color:#117a65}
+    .type-fill_gap{color:#b9770e}
+    .type-writing_micro{color:#922b21}
+
     .footer{text-align:center;padding:32px 0;font-family:'Playfair Display',serif;font-size:18px;color:var(--muted);letter-spacing:.6em}
-    @media(max-width:600px){.shell{padding:16px 12px}.masthead h1{font-size:28px}.stats-grid{grid-template-columns:1fr}.stat{border-right:none;border-bottom:1px solid var(--fg)}.stat:last-child{border-bottom:none}}
+    @media(max-width:600px){
+      .shell{padding:16px 12px}
+      .masthead h1{font-size:28px}
+      .stats-grid{grid-template-columns:repeat(2,1fr)}
+      .stat:nth-child(2){border-right:none}
+      .stat:nth-child(1),.stat:nth-child(2){border-bottom:1px solid var(--fg)}
+      .stat .val{font-size:32px}
+    }
   </style>
   <script>
     (function(){var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');
@@ -178,11 +200,11 @@ export function renderStatsPage(
     </header>
 
     <div class="meta-bar">
-      <span>${esc(user.name)} &middot; ${esc(user.email)}</span>
-      <span><a href="/s/${esc(user.token)}">&larr; Portada</a> &middot; <a href="/practice/${esc(user.token)}">Pr&aacute;ctica de Hoy</a></span>
+      <span>${esc(user.name)}</span>
+      <a href="/s/${esc(user.token)}">&larr; Volver al tablero</a>
     </div>
 
-    <!-- STREAK STATS -->
+    <!-- STATS -->
     <div class="stats-grid">
       <div class="stat">
         <div class="label">Racha Actual</div>
@@ -195,9 +217,14 @@ export function renderStatsPage(
         <div class="unit">d&iacute;as</div>
       </div>
       <div class="stat">
-        <div class="label">Total Completado</div>
-        <div class="val">${totalSubmissions}</div>
-        <div class="unit">pr&aacute;cticas</div>
+        <div class="label">Ejercicios</div>
+        <div class="val">${totalExercises}</div>
+        <div class="unit">completados</div>
+      </div>
+      <div class="stat">
+        <div class="label">Tableros</div>
+        <div class="val">${totalBoards}</div>
+        <div class="unit">completados</div>
       </div>
     </div>
 
@@ -218,17 +245,17 @@ export function renderStatsPage(
       </div>
     </div>
 
-    <!-- SCORE HISTORY -->
+    <!-- RECENT HISTORY -->
     <div class="section">
       <div class="section-head">
-        <span>Historial de Puntajes</span>
+        <span>Historial Reciente</span>
         <span style="font-weight:400;letter-spacing:1px">&Uacute;ltimos 20</span>
       </div>
       ${
         recentSubmissions.length === 0
-          ? '<div class="empty-state">A&uacute;n no has completado ninguna pr&aacute;ctica.</div>'
+          ? '<div class="empty-state">A&uacute;n no has completado ning&uacute;n ejercicio.</div>'
           : `<table>
-        <thead><tr><th>Fecha</th><th>Art&iacute;culo</th><th>Puntaje</th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Tipo</th><th>Puntaje</th></tr></thead>
         <tbody>${historyRows}</tbody>
       </table>`
       }

@@ -744,4 +744,23 @@ export function getTodaysPracticesWithStatus(_userId: number): PracticeWithStatu
 export function getRecentPracticesWithStatus(_userId: number, _limit?: number): PracticeWithStatus[] { return []; }
 export function getRecentSubmissions(_userId: number, _limit?: number): Array<Submission & { date: string; article_title: string }> { return []; }
 
+export interface RecentSubmissionRow {
+  date: string;
+  exercise_type: ExerciseType;
+  score: number | null;
+  max_score: number;
+}
+
+export function getRecentSubmissionsWithType(userId: number, limit = 20): RecentSubmissionRow[] {
+  return db.prepare(`
+    SELECT b.date, e.type as exercise_type, s.score, e.max_score
+    FROM submissions s
+    JOIN exercises e ON e.id = s.exercise_id
+    JOIN boards b ON b.id = e.board_id
+    WHERE s.user_id = ? AND s.score IS NOT NULL
+    ORDER BY s.submitted_at DESC
+    LIMIT ?
+  `).all(userId, limit) as RecentSubmissionRow[];
+}
+
 export default db;

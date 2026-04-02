@@ -89,6 +89,26 @@ describe("Student routes", () => {
     expect(html).toContain("<!DOCTYPE html>");
   });
 
+  it("renders stats page for valid user", async () => {
+    const user = db.ensureUser("stats-test@example.com", "Stats User");
+    const app = createApp();
+    const res = await app.request(`/s/${user.token}/stats`);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("Estad");
+    expect(html).toContain("Racha Actual");
+    expect(html).toContain("Ejercicios");
+    expect(html).toContain("Tableros");
+    expect(html).toContain("Actividad");
+    expect(html).toContain("Historial Reciente");
+  });
+
+  it("returns 404 for stats with invalid token", async () => {
+    const app = createApp();
+    const res = await app.request("/s/bad-token/stats");
+    expect(res.status).toBe(404);
+  });
+
   it("renders exercise in feedback mode when already submitted", async () => {
     const user = db.ensureUser("submitted@example.com", "Submitted User");
     const board = db.createBoard("2099-01-02", "Submit Topic");
