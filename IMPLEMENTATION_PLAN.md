@@ -1,7 +1,7 @@
 # Implementation Plan — IELTS Daily
 
 Generated: 2026-04-02
-Status: 8 of 18 tasks complete
+Status: 9 of 18 tasks complete
 
 ## Summary
 
@@ -156,7 +156,7 @@ The current app has working infrastructure (Hono, SQLite, cron, email, Fly.io de
 ---
 
 ### [P3-2] Exercise Template: Long Reading
-- **Status**: NOT STARTED
+- **Status**: DONE (2026-04-02)
 - **Description**: Create `src/templates/exercise-long-reading.ts` rendering the Exercise 1 page. Layout: back link ("← Volver al tablero"), exercise type kicker, article title (Playfair Display), full passage (Lora, justified), divider, 5 numbered questions. Each question rendered by type: multiple choice → vertical radio pill buttons (A-D), T/F/NG → 3 horizontal pill buttons. Submit button (disabled until all answered). After submission: each question shows ✓/✗ with correct answer and explanation, score as "X/5". All interaction via vanilla JS (no framework). Follow `specs/exercise-1-long-reading.md` and `specs/design.md`.
 - **Acceptance Criteria**:
   - [ ] Renders article with title and full passage
