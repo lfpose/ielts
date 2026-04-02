@@ -1,128 +1,20 @@
 import { Hono } from "hono";
 import { basicAuth } from "hono/basic-auth";
 import {
-  getUserByToken,
-  getTodaysPractice,
-  getTodaysPracticesWithStatus,
-  getPracticeById,
-  getPracticeByDate,
-  getSubmission,
-  createSubmission,
-  updateSubmissionFeedback,
-  getActivityData,
-  getCurrentStreak,
-  getLongestStreak,
-  getTotalSubmissions,
-  getRecentSubmissions,
-  getRecentPracticesWithStatus,
-  deleteTodaysPractice,
   getAllSettings,
   setSetting,
   getRecentEmailLogs,
   getEmailStats,
   getAllUsers,
-} from "./db.js";
-import { evaluateAnswers, evaluateWriting } from "./services/questions.js";
-import { renderPracticePage, renderNoPracticePage } from "./templates/practice.js";
-import { renderStatsPage } from "./templates/stats.js";
-import { renderNewspaper } from "./templates/newspaper.js";
-import { runDailyJob } from "./index.js";
+  deleteBoardByDate,
+} from "../db.js";
+import { runDailyJob } from "../index.js";
 
 const DASH_USER = process.env.DASH_USER || "admin";
 const DASH_PASS = process.env.DASH_PASS || "ielts2024";
 const BASE_URL = process.env.BASE_URL || "https://ielts-daily.fly.dev";
 
 const app = new Hono();
-
-// ==============================
-// PUBLIC ROUTES (no auth needed)
-// ==============================
-
-// Student newspaper homepage
-app.get("/s/:token", (c) => {
-  const user = getUserByToken(c.req.param("token"));
-  if (!user) return c.text("Invalid link.", 404);
-
-  const todayPractices = getTodaysPracticesWithStatus(user.id);
-  const archive = getRecentPracticesWithStatus(user.id, 10);
-  const streak = getCurrentStreak(user.id);
-  const longest = getLongestStreak(user.id);
-  const total = getTotalSubmissions(user.id);
-  const activity = getActivityData(user.id);
-
-  return c.html(renderNewspaper(user, todayPractices, archive, streak, longest, total, activity));
-});
-
-// Practice page (supports ?id= for specific practice, ?date= for legacy)
-app.get("/practice/:token", async (c) => {
-  const user = getUserByToken(c.req.param("token"));
-  if (!user) return c.text("Invalid link.", 404);
-
-  const idParam = c.req.query("id");
-  const dateParam = c.req.query("date");
-  const practice = idParam ? getPracticeById(Number(idParam)) : dateParam ? getPracticeByDate(dateParam) : getTodaysPractice();
-  if (!practice) return c.html(renderNoPracticePage(user));
-
-  const existing = getSubmission(user.id, practice.id) ?? null;
-  return c.html(renderPracticePage(user, practice, existing));
-});
-
-// Submit answers
-app.post("/practice/:token", async (c) => {
-  const user = getUserByToken(c.req.param("token"));
-  if (!user) return c.text("Invalid link.", 404);
-
-  const idParam = c.req.query("id");
-  const dateParam = c.req.query("date");
-  const practice = idParam ? getPracticeById(Number(idParam)) : dateParam ? getPracticeByDate(dateParam) : getTodaysPractice();
-  if (!practice) return c.text("No practice available.", 404);
-
-  const existing = getSubmission(user.id, practice.id);
-  if (existing?.score) {
-    return c.html(renderPracticePage(user, practice, existing));
-  }
-
-  const body = await c.req.parseBody();
-  const answers = typeof body.answers === "string" ? body.answers.trim() : "";
-  if (!answers) return c.redirect(`/practice/${user.token}?id=${practice.id}`);
-
-  const subId = createSubmission(user.id, practice.id, answers);
-
-  try {
-    let result;
-    if (practice.type === "writing") {
-      result = await evaluateWriting(practice.writing_prompt || "", answers, user.name);
-    } else {
-      result = await evaluateAnswers(practice.questions || "", practice.answer_key || "", answers, user.name);
-    }
-    updateSubmissionFeedback(subId, result.score, result.feedback);
-  } catch (err) {
-    console.error("Evaluation failed:", err);
-    updateSubmissionFeedback(subId, "?/?", "Evaluation failed. Please try again later.");
-  }
-
-  // Re-fetch and render with feedback
-  const updated = getSubmission(user.id, practice.id) ?? null;
-  return c.html(renderPracticePage(user, practice, updated));
-});
-
-// Stats page
-app.get("/stats/:token", (c) => {
-  const user = getUserByToken(c.req.param("token"));
-  if (!user) return c.text("Invalid link.", 404);
-
-  const activity = getActivityData(user.id);
-  const streak = getCurrentStreak(user.id);
-  const longest = getLongestStreak(user.id);
-  const total = getTotalSubmissions(user.id);
-  const recent = getRecentSubmissions(user.id);
-
-  return c.html(renderStatsPage(user, activity, streak, longest, total, recent));
-});
-
-// ==============================
-// ADMIN ROUTES (auth required)
-// ==============================
 
 app.use("/*", basicAuth({ username: DASH_USER, password: DASH_PASS }));
 
@@ -136,13 +28,14 @@ app.get("/", (c) => {
 
 app.post("/trigger", async (c) => {
   runDailyJob().catch((err) => console.error("Manual trigger failed:", err));
-  return c.redirect("/");
+  return c.redirect("/admin");
 });
 
 app.post("/refresh", async (c) => {
-  deleteTodaysPractice();
+  const today = new Date().toISOString().slice(0, 10);
+  deleteBoardByDate(today);
   runDailyJob().catch((err) => console.error("Refresh failed:", err));
-  return c.redirect("/");
+  return c.redirect("/admin");
 });
 
 app.post("/settings", async (c) => {
@@ -150,7 +43,7 @@ app.post("/settings", async (c) => {
   if (typeof body.recipients === "string") setSetting("recipients", body.recipients.trim());
   if (typeof body.from_email === "string") setSetting("from_email", body.from_email.trim());
   if (typeof body.cron_schedule === "string") setSetting("cron_schedule", body.cron_schedule.trim());
-  return c.redirect("/");
+  return c.redirect("/admin");
 });
 
 app.get("/api/logs", (c) => c.json({ stats: getEmailStats(), logs: getRecentEmailLogs(50) }));
@@ -178,7 +71,7 @@ function renderAdminDashboard(
   const logRows = logs.map((l: any) => `
     <tr>
       <td class="td mono">${l.sent_at}</td>
-      <td class="td">${l.article_title ? esc(l.article_title) : "&mdash;"}</td>
+      <td class="td">${l.topic ? esc(l.topic) : "&mdash;"}</td>
       <td class="td mono">${esc(l.recipients)}</td>
       <td class="td"><span class="badge${l.status === "error" ? " badge-red" : ""}">${l.status.toUpperCase()}</span></td>
       <td class="td mono">${l.duration_ms ? (l.duration_ms / 1000).toFixed(1) + "s" : "&mdash;"}</td>
@@ -191,7 +84,7 @@ function renderAdminDashboard(
       <td class="td">${esc(u.name)}</td>
       <td class="td mono">${esc(u.email)}</td>
       <td class="td mono" style="font-size:11px;">
-        <a href="${BASE_URL}/practice/${esc(u.token)}" style="color:var(--fg);border-bottom:1px solid var(--muted);">/practice/${esc(u.token).slice(0,8)}...</a>
+        <a href="${BASE_URL}/s/${esc(u.token)}" style="color:var(--fg);border-bottom:1px solid var(--muted);">/s/${esc(u.token).slice(0,8)}...</a>
       </td>
     </tr>`
   ).join("");
@@ -268,10 +161,10 @@ function renderAdminDashboard(
       <div class="toolbar-left">Dashboard</div>
       <div class="toolbar-right">
         <button class="btn-icon" onclick="toggleTheme()" title="Toggle dark mode" id="themeBtn"></button>
-        <form method="POST" action="/refresh" style="display:inline" onsubmit="this.querySelector('button').textContent='REFRESHING\u2026'">
+        <form method="POST" action="/admin/refresh" style="display:inline" onsubmit="this.querySelector('button').textContent='REFRESHING\u2026'">
           <button type="submit" class="btn-outline" style="margin-right:4px">Refresh Article</button>
         </form>
-        <form method="POST" action="/trigger" style="display:inline" onsubmit="this.querySelector('button').textContent='SENDING\u2026'">
+        <form method="POST" action="/admin/trigger" style="display:inline" onsubmit="this.querySelector('button').textContent='SENDING\u2026'">
           <button type="submit" class="btn-primary">Send Now</button>
         </form>
       </div>
@@ -297,14 +190,14 @@ function renderAdminDashboard(
       <div class="section-head"><span>Email Log</span><span class="hint">Last 30</span></div>
       ${logs.length === 0
         ? '<div class="empty-state">No emails sent yet.</div>'
-        : `<table><thead><tr><th>Sent</th><th>Article</th><th>Recipients</th><th>Status</th><th>Time</th><th>Error</th></tr></thead><tbody>${logRows}</tbody></table>`
+        : `<table><thead><tr><th>Sent</th><th>Topic</th><th>Recipients</th><th>Status</th><th>Time</th><th>Error</th></tr></thead><tbody>${logRows}</tbody></table>`
       }
     </div>
 
     <!-- SETTINGS -->
     <div class="section">
       <div class="section-head"><span>Configuration</span><span class="hint">Live</span></div>
-      <form method="POST" action="/settings">
+      <form method="POST" action="/admin/settings">
         <div class="settings-grid">
           <div class="field"><label>Recipients</label><input type="text" name="recipients" value="${esc(settings.recipients)}" placeholder="email1,email2"></div>
           <div class="field"><label>From Address</label><input type="text" name="from_email" value="${esc(settings.from_email)}" placeholder="ielts@domain.com"></div>
@@ -316,7 +209,7 @@ function renderAdminDashboard(
     </div>
 
     <div class="footer-rule">&#x2727; &#x2727; &#x2727;</div>
-    <div class="footer">Auto-refresh 30s &middot; <a href="/">Refresh</a></div>
+    <div class="footer">Auto-refresh 30s &middot; <a href="/admin">Refresh</a></div>
   </div>
   <script>
     function getTheme(){return localStorage.getItem('theme')||'auto'}

@@ -1,5 +1,6 @@
 import cron from "node-cron";
 import { serve } from "@hono/node-server";
+import { Hono } from "hono";
 import { fetchRandomArticle } from "./services/article.js";
 import { generateQuestions, generateWritingPrompt } from "./services/questions.js";
 import { sendInviteEmail } from "./services/email.js";
@@ -11,7 +12,9 @@ import {
   getSetting,
   logEmail,
 } from "./db.js";
-import dashboard from "./dashboard.js";
+import adminRoutes from "./routes/admin.js";
+import studentRoutes from "./routes/student.js";
+import authRoutes from "./routes/auth.js";
 
 const BASE_URL = process.env.BASE_URL || "https://ielts-daily.fly.dev";
 
@@ -97,8 +100,13 @@ export async function runDailyJob() {
 cron.schedule("0 7 * * *", runDailyJob);
 console.log("IELTS Daily scheduler started. Cron: 7:00 AM UTC.");
 
+const app = new Hono();
+app.route("/admin", adminRoutes);
+app.route("/s", studentRoutes);
+app.route("/", authRoutes);
+
 const port = Number(process.env.PORT) || 8080;
-serve({ fetch: dashboard.fetch, port, hostname: "0.0.0.0" }, () => {
+serve({ fetch: app.fetch, port, hostname: "0.0.0.0" }, () => {
   console.log(`Server running on http://0.0.0.0:${port}`);
 });
 

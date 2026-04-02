@@ -1,7 +1,7 @@
 # Implementation Plan — IELTS Daily
 
 Generated: 2026-04-02
-Status: 2 of 18 tasks complete
+Status: 3 of 18 tasks complete
 
 ## Summary
 
@@ -44,7 +44,7 @@ The current app has working infrastructure (Hono, SQLite, cron, email, Fly.io de
 ---
 
 ### [P0-3] File Restructuring — Routes Directory
-- **Status**: NOT STARTED
+- **Status**: DONE (2026-04-02)
 - **Description**: Create `src/routes/` directory. Move admin routes from `src/dashboard.ts` into `src/routes/admin.ts` (as a Hono sub-app). Create stub files `src/routes/student.ts` and `src/routes/auth.ts` with empty Hono apps that will be filled in later tasks. Update `src/index.ts` to import and mount route sub-apps: auth at `/`, student at `/s`, admin at `/admin`. Delete `src/dashboard.ts` after migration. Keep existing admin functionality working.
 - **Acceptance Criteria**:
   - [ ] `src/routes/admin.ts` exists with admin routes (basic auth, dashboard, settings, trigger, refresh)
