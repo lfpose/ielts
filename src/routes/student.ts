@@ -120,6 +120,99 @@ app.get("/:token/exercise/:exerciseId", (c) => {
   return c.html(html);
 });
 
+// =============================================
+// Client → Grader data transformations
+// The client-side JS sends { answers: { key: value } } objects,
+// but graders expect typed arrays/objects.
+// =============================================
+
+function transformReadingAnswers(body: any): { answers: Array<{ number: number; answer: string }> } {
+  // Already in grader format: { answers: [{ number, answer }] }
+  if (Array.isArray(body.answers)) return body;
+  // Client format: { answers: { "1": "A", "2": "B" } }
+  const raw = body.answers || {};
+  return {
+    answers: Object.entries(raw).map(([key, val]) => ({
+      number: parseInt(key, 10),
+      answer: String(val),
+    })),
+  };
+}
+
+function transformVocabularyAnswers(
+  body: any,
+  content: VocabularyContent
+): { matches: Array<{ word: string; matched_definition: string }> } {
+  // Already in grader format: { matches: [{ word, matched_definition }] }
+  if (Array.isArray(body.matches)) return body;
+  // Client format: { answers: { wordIndex: defOrigIndex } }
+  const raw = body.answers || {};
+  return {
+    matches: Object.entries(raw).map(([wordIdx, defIdx]) => ({
+      word: content.words[parseInt(wordIdx, 10)]?.word ?? "",
+      matched_definition: content.words[parseInt(String(defIdx), 10)]?.definition ?? "",
+    })),
+  };
+}
+
+function transformFillGapAnswers(body: any): { fills: Array<{ number: number; word: string }> } {
+  // Already in grader format: { fills: [{ number, word }] }
+  if (Array.isArray(body.fills)) return body;
+  // Client format: { answers: { "1": "word" } }
+  const raw = body.answers || {};
+  return {
+    fills: Object.entries(raw).map(([key, val]) => ({
+      number: parseInt(key, 10),
+      word: String(val),
+    })),
+  };
+}
+
+function transformWritingAnswers(body: any): { text: string } {
+  // Already in grader format: { text: "..." }
+  if (typeof body.text === "string") return body;
+  // Client format: { answers: { text: "..." } }
+  return { text: body.answers?.text ?? "" };
+}
+
+// =============================================
+// Grader → Template feedback transformations
+// Graders return { results: [...] } but templates expect flat arrays.
+// Also map field names to match template interfaces.
+// =============================================
+
+function transformReadingFeedback(feedback: any): any[] {
+  return (feedback.results || []).map((r: any) => ({
+    correct: r.correct,
+    user_answer: r.user_answer,
+    correct_answer: r.correct_answer,
+    explanation: r.explanation,
+  }));
+}
+
+function transformVocabularyFeedback(feedback: any, content: VocabularyContent): any[] {
+  return (feedback.results || []).map((r: any) => {
+    const wordEntry = content.words.find(w => w.word === r.word);
+    return {
+      word: r.word,
+      correct: r.correct,
+      correct_definition: r.correct_definition,
+      user_definition: "",
+      context: wordEntry?.context ?? "",
+    };
+  });
+}
+
+function transformFillGapFeedback(feedback: any): any[] {
+  return (feedback.results || []).map((r: any) => ({
+    blank_number: r.number,
+    user_word: r.user_word,
+    correct_word: r.correct_word,
+    correct: r.correct,
+    explanation: "",
+  }));
+}
+
 // Submit exercise answers
 app.post("/:token/exercise/:exerciseId", async (c) => {
   const user = resolveUser(c.req.param("token"));
@@ -141,47 +234,82 @@ app.post("/:token/exercise/:exerciseId", async (c) => {
     });
   }
 
-  const body = await c.req.json();
-  const content = JSON.parse(exercise.content);
+  try {
+    const body = await c.req.json();
+    const content = JSON.parse(exercise.content);
 
-  let gradeResult;
-  switch (exercise.type as ExerciseType) {
-    case "long_reading":
-      gradeResult = gradeLongReading(content as LongReadingContent, body);
-      break;
-    case "short_reading":
-      gradeResult = gradeShortReading(content as ShortReadingContent, body);
-      break;
-    case "vocabulary":
-      gradeResult = gradeVocabulary(content as VocabularyContent, body);
-      break;
-    case "fill_gap":
-      gradeResult = gradeFillGap(content as FillGapContent, body);
-      break;
-    case "writing_micro":
-      gradeResult = await gradeWritingMicro(content as WritingMicroContent, body, user.name);
-      break;
-    default:
-      return c.json({ error: "Unknown exercise type." }, 400);
-  }
+    let gradeResult;
+    let storedAnswers: any;
+    let storedFeedback: any;
 
-  // Save submission
-  const submissionId = createSubmission(user.id, exercise.id, JSON.stringify(body));
-  updateSubmissionFeedback(submissionId, gradeResult.score, JSON.stringify(gradeResult.feedback));
-
-  // Add vocabulary words to word bank
-  if (exercise.type === "vocabulary") {
-    const vocabContent = content as VocabularyContent;
-    for (const w of vocabContent.words) {
-      addToWordBank(user.id, w.word, w.definition, w.context, exercise.id);
+    switch (exercise.type as ExerciseType) {
+      case "long_reading": {
+        const transformed = transformReadingAnswers(body);
+        gradeResult = gradeLongReading(content as LongReadingContent, transformed);
+        storedAnswers = transformed;
+        storedFeedback = transformReadingFeedback(gradeResult.feedback);
+        break;
+      }
+      case "short_reading": {
+        const transformed = transformReadingAnswers(body);
+        gradeResult = gradeShortReading(content as ShortReadingContent, transformed);
+        storedAnswers = transformed;
+        storedFeedback = transformReadingFeedback(gradeResult.feedback);
+        break;
+      }
+      case "vocabulary": {
+        const vocabContent = content as VocabularyContent;
+        const transformed = transformVocabularyAnswers(body, vocabContent);
+        gradeResult = gradeVocabulary(vocabContent, transformed);
+        storedAnswers = transformed;
+        storedFeedback = transformVocabularyFeedback(gradeResult.feedback, vocabContent);
+        break;
+      }
+      case "fill_gap": {
+        const transformed = transformFillGapAnswers(body);
+        gradeResult = gradeFillGap(content as FillGapContent, transformed);
+        storedAnswers = transformed;
+        storedFeedback = transformFillGapFeedback(gradeResult.feedback);
+        break;
+      }
+      case "writing_micro": {
+        const transformed = transformWritingAnswers(body);
+        gradeResult = await gradeWritingMicro(content as WritingMicroContent, transformed, user.name);
+        storedAnswers = transformed;
+        storedFeedback = gradeResult.feedback; // Writing feedback shape matches template
+        break;
+      }
+      default:
+        return c.json({ error: "Unknown exercise type." }, 400);
     }
-  }
 
-  return c.json({
-    score: gradeResult.score,
-    maxScore: exercise.max_score,
-    feedback: gradeResult.feedback,
-  });
+    // Save submission with transformed data for template compatibility
+    const submissionId = createSubmission(user.id, exercise.id, JSON.stringify(storedAnswers));
+    updateSubmissionFeedback(submissionId, gradeResult.score, JSON.stringify(storedFeedback));
+
+    // Add vocabulary words to word bank
+    if (exercise.type === "vocabulary") {
+      const vocabContent = content as VocabularyContent;
+      for (const w of vocabContent.words) {
+        addToWordBank(user.id, w.word, w.definition, w.context, exercise.id);
+      }
+    }
+
+    return c.json({
+      score: gradeResult.score,
+      maxScore: exercise.max_score,
+      feedback: gradeResult.feedback,
+    });
+  } catch (err: any) {
+    console.error(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      method: "POST",
+      path: c.req.path,
+      error: err.message,
+      stack: err.stack,
+    }));
+    return c.json({ error: "Submission failed. Please try again." }, 500);
+  }
 });
 
 export default app;
