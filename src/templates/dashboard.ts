@@ -1,4 +1,4 @@
-import type { User, BoardWithStatus, ActivityDay, ExerciseType } from "../db.js";
+import type { User, BoardWithStatus, ActivityDay, ExerciseType, ExerciseWithStatus } from "../db.js";
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -78,31 +78,61 @@ function buildHeatmap(activityData: ActivityDay[]): string {
   return `<svg width="100%" viewBox="0 0 ${w} ${h}" style="max-width:${w}px;">${mLabels.map((m) => `<text x="${m.x}" y="10" fill="var(--n500)" font-size="9" font-family="'Inter',sans-serif">${m.l}</text>`).join("")}${cells}</svg>`;
 }
 
-function renderExerciseCards(board: BoardWithStatus, token: string): string {
-  return board.exercises
-    .map((ex) => {
-      const label = EXERCISE_LABELS[ex.type] || ex.type;
-      const num = EXERCISE_ICONS[ex.type] || "?";
-      const link = `/s/${esc(token)}/exercise/${ex.id}`;
+function getExcerpt(content: string, type: ExerciseType): { title: string; excerpt: string } {
+  try {
+    const parsed = JSON.parse(content);
+    if (type === "long_reading" || type === "short_reading") {
+      const passage = (parsed.passage || "") as string;
+      return {
+        title: parsed.title || "",
+        excerpt: passage.length > 120 ? passage.slice(0, 120) + "\u2026" : passage,
+      };
+    }
+    if (type === "writing_micro") {
+      const prompt = (parsed.prompt || "") as string;
+      return { title: "", excerpt: prompt.length > 100 ? prompt.slice(0, 100) + "\u2026" : prompt };
+    }
+    if (type === "vocabulary") {
+      const words = (parsed.words || []) as string[];
+      return { title: "", excerpt: words.slice(0, 4).join(" \u00b7 ") + (words.length > 4 ? " \u2026" : "") };
+    }
+    if (type === "fill_gap") {
+      const text = (parsed.text || parsed.paragraph || "") as string;
+      return { title: "", excerpt: text.length > 100 ? text.slice(0, 100) + "\u2026" : text };
+    }
+  } catch { /* fallback */ }
+  return { title: "", excerpt: "" };
+}
 
-      if (ex.completed) {
-        return `<a href="${link}" class="ex-card completed">
-          <div class="ex-num">${num}</div>
-          <div class="ex-info">
-            <div class="ex-type">${esc(label)}</div>
-          </div>
-          <div class="ex-score">${ex.user_score}/${ex.max_score}</div>
-        </a>`;
-      }
-      return `<a href="${link}" class="ex-card available">
-        <div class="ex-num">${num}</div>
-        <div class="ex-info">
-          <div class="ex-type">${esc(label)}</div>
-        </div>
-        <div class="ex-status">Disponible</div>
-      </a>`;
-    })
-    .join("");
+const CARD_SIZE: Record<ExerciseType, string> = {
+  long_reading: "card-lg",
+  short_reading: "card-md",
+  vocabulary: "card-sm",
+  fill_gap: "card-sm",
+  writing_micro: "card-sm",
+};
+
+function renderMasonryCard(ex: ExerciseWithStatus, token: string): string {
+  const label = EXERCISE_LABELS[ex.type] || ex.type;
+  const link = `/s/${esc(token)}/exercise/${ex.id}`;
+  const size = CARD_SIZE[ex.type] || "card-sm";
+  const { title, excerpt } = getExcerpt(ex.content, ex.type);
+  const done = ex.completed;
+
+  const statusBadge = done
+    ? `<span class="card-badge done">${ex.user_score}/${ex.max_score}</span>`
+    : `<span class="card-badge avail">Disponible</span>`;
+
+  return `<a href="${link}" class="m-card ${size}${done ? " completed" : ""}">
+    <div class="card-kicker">${esc(label)}</div>
+    ${title ? `<div class="card-title">${esc(title)}</div>` : ""}
+    ${excerpt ? `<div class="card-excerpt">${esc(excerpt)}</div>` : ""}
+    <div class="card-foot">${statusBadge}</div>
+  </a>`;
+}
+
+function renderExerciseCards(board: BoardWithStatus, token: string): string {
+  return board.exercises.map((ex) => renderMasonryCard(ex, token)).join("");
 }
 
 function renderProgressBar(board: BoardWithStatus): string {
@@ -206,17 +236,27 @@ export function renderDashboard(
     .prog-seg.empty{background:var(--muted)}
     .prog-label{font-family:'Inter',sans-serif;font-size:11px;color:var(--n500);text-transform:uppercase;letter-spacing:1px}
 
-    /* EXERCISE CARDS */
-    .ex-grid{display:flex;flex-direction:column;gap:8px}
-    .ex-card{display:flex;align-items:center;gap:16px;padding:14px 18px;border:1px solid var(--muted);transition:all .15s;cursor:pointer}
-    .ex-card.available:hover{border-color:var(--fg)}
-    .ex-card.completed{background:color-mix(in srgb, var(--correct) 6%, var(--bg))}
-    .ex-num{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:500;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--muted);border-radius:50%;color:var(--n500);flex-shrink:0}
-    .ex-card.completed .ex-num{border-color:var(--correct);color:var(--correct)}
-    .ex-info{flex:1;min-width:0}
-    .ex-type{font-family:'Inter',sans-serif;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px}
-    .ex-status{font-family:'Inter',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--red);font-weight:600;flex-shrink:0}
-    .ex-score{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--correct);flex-shrink:0}
+    /* MASONRY GRID */
+    .masonry{columns:3;column-gap:16px}
+    .m-card{display:block;break-inside:avoid;margin-bottom:16px;padding:20px;border:1px solid var(--muted);transition:all .15s;cursor:pointer}
+    .m-card:hover{border-color:var(--fg)}
+    .m-card.completed{background:color-mix(in srgb, var(--correct) 6%, var(--bg))}
+    .card-kicker{font-family:'Inter',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--red);margin-bottom:8px}
+    .m-card.completed .card-kicker{color:var(--correct)}
+    .card-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;line-height:1.25;margin-bottom:8px}
+    .card-lg .card-title{font-size:24px}
+    .card-excerpt{font-family:'Lora',serif;font-size:14px;line-height:1.6;color:var(--n600);margin-bottom:12px}
+    .card-lg .card-excerpt{font-size:15px}
+    .card-foot{display:flex;justify-content:flex-end}
+    .card-badge{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;padding:3px 8px}
+    .card-badge.avail{color:var(--red);border:1px solid var(--red)}
+    .card-badge.done{color:var(--correct);border:1px solid var(--correct);font-family:'JetBrains Mono',monospace}
+    /* Card sizes — large gets more excerpt lines */
+    .card-lg .card-excerpt{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+    .card-md .card-excerpt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .card-sm .card-excerpt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    /* Large card spans full width on 3-col to act as lead */
+    .card-lg{column-span:all;margin-bottom:16px}
 
     /* NO BOARD */
     .no-board{padding:48px 24px;text-align:center;border:1px solid var(--muted)}
@@ -243,8 +283,15 @@ export function renderDashboard(
       .stats-row{grid-template-columns:1fr 1fr}
       .stat-heatmap{grid-column:1/-1;border-top:1px solid var(--fg);border-right:none}
       .stat-cell:nth-child(2){border-right:none}
+      .masonry{columns:1}
+      .card-lg{column-span:none}
+      .card-title{font-size:18px}
+      .card-lg .card-title{font-size:20px}
       .arch-date{min-width:auto;font-size:10px}
       .arch-topic{font-size:14px}
+    }
+    @media(min-width:601px) and (max-width:800px){
+      .masonry{columns:2}
     }
   </style>
   <script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})()</script>
@@ -292,7 +339,7 @@ export function renderDashboard(
         todaysBoard
           ? `<div class="today-topic">${esc(todaysBoard.board.topic)}</div>
              ${renderProgressBar(todaysBoard)}
-             <div class="ex-grid">${renderExerciseCards(todaysBoard, user.token)}</div>`
+             <div class="masonry">${renderExerciseCards(todaysBoard, user.token)}</div>`
           : `<div class="no-board">
                <div class="title">Sin tablero todav&iacute;a</div>
                <p>Los ejercicios de hoy se generar&aacute;n pronto. Vuelve m&aacute;s tarde.</p>
