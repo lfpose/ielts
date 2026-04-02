@@ -1,7 +1,7 @@
 # Implementation Plan — IELTS Daily
 
 Generated: 2026-04-02
-Status: 3 of 18 tasks complete
+Status: 4 of 18 tasks complete
 
 ## Summary
 
@@ -60,7 +60,7 @@ The current app has working infrastructure (Hono, SQLite, cron, email, Fly.io de
 ---
 
 ### [P1-1] Content Generation Service
-- **Status**: NOT STARTED
+- **Status**: DONE (2026-04-02)
 - **Description**: Create `src/services/content.ts` that generates all 5 exercises for a daily board using the Anthropic Claude API. Functions: `pickTopic()` (selects from topic_queue per rules in `specs/content-pipeline.md`), `generateBoard(topic, difficulty)` (orchestrates generation of all 5 exercises), and individual generators: `generateLongReading(topic, difficulty)`, `generateShortReading(topic, difficulty)`, `generateVocabulary(longReadingContent)`, `generateFillGap(topic, difficulty, userWordBank)`, `generateWritingMicro(topic)`. Each returns the exercise content JSON matching `specs/database.md` shapes. Delete `src/services/article.ts` (RSS pipeline). Rewrite `src/services/questions.ts` → replace with content.ts (or delete questions.ts entirely if all logic moves to content.ts).
 - **Acceptance Criteria**:
   - [ ] `pickTopic()` respects: forced topics first, then top of queue, skip topics used in last 20 days
