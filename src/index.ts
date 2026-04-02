@@ -111,6 +111,43 @@ cron.schedule("0 7 * * *", runDailyJob);
 console.log("IELTS Daily scheduler started. Cron: 7:00 AM UTC.");
 
 const app = new Hono();
+
+// Request logging middleware
+app.use("*", async (c, next) => {
+  const start = Date.now();
+  await next();
+  const duration = Date.now() - start;
+  console.log(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    method: c.req.method,
+    path: c.req.path,
+    status: c.res.status,
+    duration_ms: duration,
+  }));
+});
+
+// Global error handler
+app.onError((err, c) => {
+  console.error(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    method: c.req.method,
+    path: c.req.path,
+    error: err.message,
+    stack: err.stack,
+  }));
+  return c.json({ error: "Internal server error" }, 500);
+});
+
+// Health endpoint
+app.get("/health", (c) => {
+  const board = getTodaysBoard();
+  return c.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    boardExists: !!board,
+  });
+});
+
 app.route("/admin", adminRoutes);
 app.route("/s", studentRoutes);
 app.route("/", authRoutes);
