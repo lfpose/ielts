@@ -5,6 +5,10 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+function stripOptionPrefix(s: string): string {
+  return s.replace(/^[A-Da-d][).]\s*/, "");
+}
+
 interface FeedbackItem {
   correct: boolean;
   user_answer: string;
@@ -47,7 +51,7 @@ export function renderShortReading(
             return `<label class="${cls}">
               <input type="radio" name="q${q.number}" value="${val}" ${answered ? "disabled" : ""} ${selected ? "checked" : ""}>
               <span class="pill-label">${val}</span>
-              <span class="pill-text">${esc(opt)}</span>
+              <span class="pill-text">${esc(stripOptionPrefix(opt))}</span>
             </label>`;
           })
           .join("")}</div>`;
