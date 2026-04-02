@@ -42,16 +42,13 @@ function buildHeatmap(activityData: ActivityDay[]): string {
   const activityMap = new Map<string, ActivityDay>();
   for (const d of activityData) activityMap.set(d.date, d);
 
-  const weeks = 16;
-  const cs = 12, cg = 3, step = cs + cg;
-  const w = weeks * step + 20, h = 7 * step + 16;
+  const weeks = 8;
+  const cs = 8, cg = 2, step = cs + cg;
+  const w = weeks * step + 20, h = 7 * step + 12;
   const start = new Date(today);
   start.setDate(start.getDate() - weeks * 7 + (7 - start.getDay()));
 
   let cells = "";
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const mLabels: Array<{ x: number; l: string }> = [];
-  let lastM = -1;
 
   for (let wk = 0; wk < weeks; wk++) {
     for (let day = 0; day < 7; day++) {
@@ -60,22 +57,18 @@ function buildHeatmap(activityData: ActivityDay[]): string {
       if (d > today) continue;
       const ds = d.toISOString().slice(0, 10);
       const a = activityMap.get(ds);
-      const x = wk * step + 18, y = day * step + 14;
+      const x = wk * step + 2, y = day * step + 2;
       let fill = "var(--cell-empty)";
       if (a?.submitted) {
         const sn = a.score ?? 0;
         // 21-point scale: 16+, 11-15, 6-10, 1-5
         fill = sn >= 16 ? "var(--cell-4)" : sn >= 11 ? "var(--cell-3)" : sn >= 6 ? "var(--cell-2)" : "var(--cell-1)";
       }
-      cells += `<rect x="${x}" y="${y}" width="${cs}" height="${cs}" fill="${fill}" rx="2"><title>${ds}${a?.submitted ? " — " + a.score + "/21" : ""}</title></rect>`;
-      if (day === 0 && d.getMonth() !== lastM) {
-        lastM = d.getMonth();
-        mLabels.push({ x, l: months[d.getMonth()] });
-      }
+      cells += `<rect x="${x}" y="${y}" width="${cs}" height="${cs}" fill="${fill}" rx="1"><title>${ds}${a?.submitted ? " — " + a.score + "/21" : ""}</title></rect>`;
     }
   }
 
-  return `<svg width="100%" viewBox="0 0 ${w} ${h}" style="max-width:${w}px;">${mLabels.map((m) => `<text x="${m.x}" y="10" fill="var(--n500)" font-size="9" font-family="'Inter',sans-serif">${m.l}</text>`).join("")}${cells}</svg>`;
+  return `<svg width="100%" viewBox="0 0 ${w} ${h}" style="max-width:${w}px;">${cells}</svg>`;
 }
 
 function getExcerpt(content: string, type: ExerciseType): { title: string; excerpt: string } {
@@ -216,11 +209,11 @@ export function renderDashboard(
     .btn-icon:hover{background:var(--fg);color:var(--bg)}
 
     /* STATS ROW */
-    .stats-row{display:grid;grid-template-columns:auto auto 1fr;border:1px solid var(--fg);margin-bottom:24px}
-    .stat-cell{padding:16px 24px;border-right:1px solid var(--fg);text-align:center}
-    .stat-num{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:500;line-height:1}
-    .stat-lbl{font-family:'Inter',sans-serif;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:var(--n500);margin-top:4px}
-    .stat-heatmap{padding:12px 16px;display:flex;align-items:center;overflow-x:auto}
+    .stats-row{display:flex;align-items:center;gap:16px;border:1px solid var(--fg);padding:10px 16px;margin-bottom:24px}
+    .stat-cell{text-align:center;padding:0 12px;border-right:1px solid var(--muted);flex-shrink:0}
+    .stat-num{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500;line-height:1}
+    .stat-lbl{font-family:'Inter',sans-serif;font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--n500);margin-top:2px}
+    .stat-heatmap{display:flex;align-items:center;overflow-x:auto;flex:1;min-width:0}
 
     /* TODAY'S BOARD */
     .today-section{margin-bottom:28px}
@@ -280,9 +273,9 @@ export function renderDashboard(
     @media(max-width:600px){
       .shell{padding:16px 12px}
       .masthead h1{font-size:36px}
-      .stats-row{grid-template-columns:1fr 1fr}
-      .stat-heatmap{grid-column:1/-1;border-top:1px solid var(--fg);border-right:none}
-      .stat-cell:nth-child(2){border-right:none}
+      .stats-row{flex-wrap:wrap;gap:8px;padding:8px 12px}
+      .stat-cell{padding:0 8px}
+      .stat-heatmap{flex-basis:100%;border-top:1px solid var(--muted);padding-top:8px}
       .masonry{columns:1}
       .card-lg{column-span:none}
       .card-title{font-size:18px}
