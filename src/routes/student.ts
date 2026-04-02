@@ -4,6 +4,9 @@ import {
   getUserByToken,
   getExerciseById,
   getSubmission,
+  createSubmission,
+  updateSubmissionFeedback,
+  addToWordBank,
   getTodaysBoardWithStatus,
   getActivityData,
   getCurrentStreak,
@@ -15,6 +18,20 @@ import {
   type User,
   type ExerciseType,
 } from "../db.js";
+import {
+  gradeLongReading,
+  gradeShortReading,
+  gradeVocabulary,
+  gradeFillGap,
+  gradeWritingMicro,
+} from "../services/grading.js";
+import type {
+  LongReadingContent,
+  ShortReadingContent,
+  VocabularyContent,
+  FillGapContent,
+  WritingMicroContent,
+} from "../services/content.js";
 import { renderDashboard } from "../templates/dashboard.js";
 import { renderStatsPage } from "../templates/stats.js";
 import { renderLongReading } from "../templates/exercise-long-reading.js";
@@ -101,6 +118,70 @@ app.get("/:token/exercise/:exerciseId", (c) => {
 
   const html = renderer(user, exercise, submission);
   return c.html(html);
+});
+
+// Submit exercise answers
+app.post("/:token/exercise/:exerciseId", async (c) => {
+  const user = resolveUser(c.req.param("token"));
+  if (!user) return c.json({ error: "Invalid link." }, 404);
+
+  const exerciseId = parseInt(c.req.param("exerciseId"), 10);
+  if (isNaN(exerciseId)) return c.json({ error: "Not found." }, 404);
+
+  const exercise = getExerciseById(exerciseId);
+  if (!exercise) return c.json({ error: "Not found." }, 404);
+
+  // Prevent duplicate submissions — return existing feedback
+  const existing = getSubmission(user.id, exercise.id);
+  if (existing) {
+    return c.json({
+      score: existing.score,
+      maxScore: exercise.max_score,
+      feedback: existing.feedback ? JSON.parse(existing.feedback) : null,
+    });
+  }
+
+  const body = await c.req.json();
+  const content = JSON.parse(exercise.content);
+
+  let gradeResult;
+  switch (exercise.type as ExerciseType) {
+    case "long_reading":
+      gradeResult = gradeLongReading(content as LongReadingContent, body);
+      break;
+    case "short_reading":
+      gradeResult = gradeShortReading(content as ShortReadingContent, body);
+      break;
+    case "vocabulary":
+      gradeResult = gradeVocabulary(content as VocabularyContent, body);
+      break;
+    case "fill_gap":
+      gradeResult = gradeFillGap(content as FillGapContent, body);
+      break;
+    case "writing_micro":
+      gradeResult = await gradeWritingMicro(content as WritingMicroContent, body, user.name);
+      break;
+    default:
+      return c.json({ error: "Unknown exercise type." }, 400);
+  }
+
+  // Save submission
+  const submissionId = createSubmission(user.id, exercise.id, JSON.stringify(body));
+  updateSubmissionFeedback(submissionId, gradeResult.score, JSON.stringify(gradeResult.feedback));
+
+  // Add vocabulary words to word bank
+  if (exercise.type === "vocabulary") {
+    const vocabContent = content as VocabularyContent;
+    for (const w of vocabContent.words) {
+      addToWordBank(user.id, w.word, w.definition, w.context, exercise.id);
+    }
+  }
+
+  return c.json({
+    score: gradeResult.score,
+    maxScore: exercise.max_score,
+    feedback: gradeResult.feedback,
+  });
 });
 
 export default app;
