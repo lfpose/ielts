@@ -1,7 +1,7 @@
 # Implementation Plan — IELTS Daily
 
 Generated: 2026-04-02
-Status: 1 of 18 tasks complete
+Status: 2 of 18 tasks complete
 
 ## Summary
 
@@ -29,7 +29,7 @@ The current app has working infrastructure (Hono, SQLite, cron, email, Fly.io de
 ---
 
 ### [P0-2] Word Bank Seed Data
-- **Status**: NOT STARTED
+- **Status**: DONE (2026-04-02)
 - **Description**: Create `src/word-bank-seed.ts` exporting an array of ~1000 `{ word, difficulty }` objects. Difficulty categories: `basic` (~400 common everyday words), `intermediate` (~400 academic/formal words), `advanced` (~200 sophisticated words). Source from Oxford 3000 / Academic Word List frequency patterns. In `db.ts`, populate `word_bank_seed` table from this file on first run (if table is empty).
 - **Acceptance Criteria**:
   - [ ] File exports array of 900-1100 `{ word: string, difficulty: 'basic' | 'intermediate' | 'advanced' }` objects

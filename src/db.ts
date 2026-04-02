@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import crypto from "crypto";
 import path from "path";
 import { mkdirSync } from "fs";
+import { SEED_WORDS } from "./word-bank-seed";
 
 const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "data", "ielts.db");
 mkdirSync(path.dirname(DB_PATH), { recursive: true });
@@ -158,6 +159,18 @@ if (topicCount === 0) {
     }
   });
   insertMany(INITIAL_TOPICS);
+}
+
+// --- Pre-populate word_bank_seed from src/word-bank-seed.ts ---
+const seedCount = (db.prepare("SELECT COUNT(*) as count FROM word_bank_seed").get() as { count: number }).count;
+if (seedCount === 0) {
+  const insertSeed = db.prepare("INSERT INTO word_bank_seed (word, difficulty) VALUES (?, ?)");
+  const insertAllSeeds = db.transaction((words: Array<{ word: string; difficulty: string }>) => {
+    for (const w of words) {
+      insertSeed.run(w.word, w.difficulty);
+    }
+  });
+  insertAllSeeds(SEED_WORDS);
 }
 
 // =============================================
