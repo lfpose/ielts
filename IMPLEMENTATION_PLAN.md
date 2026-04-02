@@ -1,7 +1,7 @@
 # Implementation Plan — IELTS Daily
 
 Generated: 2026-04-02
-Status: 6 of 18 tasks complete
+Status: 7 of 18 tasks complete
 
 ## Summary
 
@@ -118,7 +118,7 @@ The current app has working infrastructure (Hono, SQLite, cron, email, Fly.io de
 ---
 
 ### [P2-1] Landing Page & Auth Routes
-- **Status**: NOT STARTED
+- **Status**: DONE (2026-04-02)
 - **Description**: Create `src/templates/landing.ts` with a minimal landing page: logo ("The IELTS Daily"), an "Enter your email" form, and a submit button. Spanish UI text. Implement `src/routes/auth.ts` with: `GET /` (if `session_token` cookie valid → redirect to `/s/:token`, else render landing page), `POST /login` (look up user by email → set HTTP-only cookie `session_token` with 1-year expiry, SameSite=Lax → redirect to `/s/:token`; if not found → re-render with error "No encontramos tu cuenta"). Update student routes to set the `session_token` cookie on first visit via token URL.
 - **Acceptance Criteria**:
   - [ ] `GET /` renders landing page when no cookie
