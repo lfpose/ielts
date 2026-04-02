@@ -1,0 +1,13 @@
+# Ralph Progress Log — Bug Fixes & Polish
+Started: 2026-04-02
+---
+
+## Codebase Patterns
+- Templates export render functions returning HTML strings with inline <script> for client-side JS
+- Exercise submissions POST JSON to /s/:token/exercise/:exerciseId, expect JSON response {score, maxScore, feedback}
+- Grading in src/services/grading.ts — deterministic for exercises 1-4, AI-graded for writing
+- DB queries in src/db.ts, routes in src/routes/, templates in src/templates/
+- Design spec at specs/design.md — Playfair Display headings, Lora body, Inter UI, warm off-white palette
+- Admin at specs/admin.md — clean functional design, Inter font, no newspaper aesthetic
+- ESM project: all imports need .js extension in TypeScript files
+---

@@ -1,232 +1,171 @@
 {
-  "name": "IELTS Daily v2",
+  "name": "IELTS Daily v2 — Bug Fixes & Polish",
   "branchName": "main",
-  "description": "Complete the IELTS Daily v2 web app — remaining exercise templates, student routes, email/stats, and admin dashboard",
+  "description": "Fix submission bugs, improve student dashboard layout, redesign admin panel, add ASCII topic art",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Test Framework Setup",
-      "description": "As a developer, I want vitest configured so all subsequent stories can include automated tests.",
+      "title": "Fix exercise submission 500 errors",
+      "description": "As a student, I want exercise submissions to work so I can get feedback on my answers.",
       "acceptanceCriteria": [
-        "vitest added as devDependency",
-        "vitest.config.ts created with TypeScript support",
-        "npm run test script added to package.json",
-        "One smoke test exists that imports src/db.ts and verifies DB init works (tables created, topic_queue populated)",
+        "Add proper error logging with try/catch in POST /s/:token/exercise/:exerciseId — log the full error stack trace to stdout so fly logs captures it",
+        "Fix grading service: the error is 'answers.answers.find is not a function' in src/services/grading.ts — the client-side JS is sending a different JSON shape than what the grader expects. Inspect each exercise template's submit JS to see what shape it POSTs, then fix grading.ts to match OR fix the templates to send the expected shape",
+        "For long_reading and short_reading: grader expects {answers: [{number, answer}]} — verify client sends this exact shape",
+        "For vocabulary: grader expects {matches: [{word, matched_definition}]} — verify client sends this",
+        "For fill_gap: grader expects {fills: [{number, word}]} — verify client sends this",
+        "For writing_micro: grader expects {text: string} — verify client sends this",
+        "All 5 exercise types submit successfully without 500 errors",
+        "After submission, the page shows feedback (correct/incorrect for each question, score) — the user should NOT see the submit button again",
         "npm run build passes",
         "npm run test passes"
       ],
       "priority": 1,
       "passes": false,
-      "notes": "",
+      "notes": "CRITICAL BUG. Fly logs show: TypeError: answers.answers.find is not a function and TypeError: Cannot read properties of undefined (reading 'find'). The mismatch is between what the client-side JS in templates POSTs and what src/services/grading.ts expects. Check BOTH sides.",
       "dependsOn": []
     },
     {
       "id": "US-002",
-      "title": "Short Reading Exercise Template",
-      "description": "As a student, I want a dedicated short reading exercise page with a 150-250 word passage and 2 questions.",
+      "title": "Fix multiple choice letter duplication",
+      "description": "As a student, I want clean question display without duplicated option letters.",
       "acceptanceCriteria": [
-        "src/templates/exercise-short-reading.ts created",
-        "Renders passage with title at top (Lora font, justified)",
-        "2 questions rendered with correct input types: radio pills for MC, horizontal buttons for T/F/NG, text input for short answer",
-        "Submit button disabled until both questions answered",
-        "After submission: each question shows check/x with correct answer and 1-sentence explanation",
-        "Score displayed as X/2",
-        "Back link Volver al tablero at top",
-        "Responsive layout, follows specs/design.md",
-        "npm run build passes",
-        "npm run test passes"
+        "Multiple choice options show letter prefix ONLY from the UI (e.g., the radio pill shows 'A)'), not from the answer text itself",
+        "If the AI-generated content includes 'A) ...' in the option text, strip the leading letter+paren from the display text",
+        "Questions display cleanly as: [A) pill] The actual answer text here",
+        "This applies to both long_reading and short_reading templates",
+        "npm run build passes"
       ],
       "priority": 2,
       "passes": false,
-      "notes": "See specs/exercise-2-short-reading.md and specs/design.md for full requirements",
+      "notes": "The AI generates options like 'A) Volcanic activity' and the template ALSO adds an 'A)' prefix, resulting in 'A) A) Volcanic activity'. Strip the prefix from content if present.",
       "dependsOn": ["US-001"]
     },
     {
       "id": "US-003",
-      "title": "Vocabulary Match Exercise Template",
-      "description": "As a student, I want an interactive vocabulary matching game to learn new words by connecting them to definitions.",
+      "title": "Add drop cap to article passages",
+      "description": "As a student, I want the first letter of reading passages to be large and decorative, like a real newspaper.",
       "acceptanceCriteria": [
-        "src/templates/exercise-vocabulary.ts created",
-        "Renders 6 words (left) and 6 shuffled definitions (right)",
-        "Tap-to-pair vanilla JS: tap word then tap definition to connect with shared color",
-        "6 distinct soft accent colors for connected pairs",
-        "Tap connected pair to disconnect (undo)",
-        "Submit disabled until all 6 pairs connected",
-        "After submission: correct green, incorrect red with correct definition + context sentence",
-        "Score displayed as X/6",
-        "Responsive: stacked on mobile, side-by-side on desktop",
-        "npm run build passes",
-        "npm run test passes"
+        "Long reading passage first letter uses CSS drop-cap: float left, large serif font (Playfair Display), ~3 lines tall",
+        "Short reading passage also has drop cap",
+        "Drop cap works correctly with dark mode",
+        "Use CSS initial-letter or float-based approach for browser compatibility",
+        "npm run build passes"
       ],
-      "priority": 2,
+      "priority": 3,
       "passes": false,
-      "notes": "See specs/exercise-3-vocabulary.md and specs/design.md. This needs real client-side JS for the matching interaction.",
-      "dependsOn": ["US-001"]
+      "notes": "Classic newspaper typography. Use CSS float:left on a ::first-letter pseudo-element or wrap the first letter in a span.",
+      "dependsOn": []
     },
     {
       "id": "US-004",
-      "title": "Fill the Gap Exercise Template",
-      "description": "As a student, I want a fill-the-gap exercise where I place words into blanks in a paragraph.",
+      "title": "Redesign student dashboard as masonry newspaper layout",
+      "description": "As a student, I want the daily board to look like a newspaper front page with cards of different sizes arranged in a masonry grid.",
       "acceptanceCriteria": [
-        "src/templates/exercise-fill-gap.ts created",
-        "Paragraph rendered with 5 numbered blanks as underlined interactive slots",
-        "7 word chips displayed below in flex-wrap row (5 correct + 2 distractors)",
-        "Tap-to-fill vanilla JS: tap blank then tap word chip to fill, chip dims",
-        "Tap filled blank to return word to bank",
-        "Submit disabled until all 5 blanks filled",
-        "After submission: correct fills green, incorrect red with correct word + explanation",
-        "Score displayed as X/5",
-        "npm run build passes",
-        "npm run test passes"
-      ],
-      "priority": 2,
-      "passes": false,
-      "notes": "See specs/exercise-4-fill-gap.md and specs/design.md",
-      "dependsOn": ["US-001"]
-    },
-    {
-      "id": "US-005",
-      "title": "Writing Micro Exercise Template",
-      "description": "As a student, I want a writing micro exercise where I respond to a prompt in 2-3 sentences with AI feedback.",
-      "acceptanceCriteria": [
-        "src/templates/exercise-writing.ts created",
-        "Prompt displayed in styled highlighted box",
-        "Textarea with live word counter (X palabras) using vanilla JS",
-        "Counter color: gray under 15, green 15-100, orange over 90",
-        "Submit enabled only when word count is 15-100",
-        "After submission: feedback card with comment, grammar corrections as original to corrected pairs, vocabulary suggestion",
-        "Score displayed as X/3",
-        "If user writes in Spanish, feedback includes: Intenta responder en ingles",
-        "src/templates/practice.ts (old template) deleted",
-        "npm run build passes",
-        "npm run test passes"
-      ],
-      "priority": 2,
-      "passes": false,
-      "notes": "See specs/exercise-5-writing-micro.md and specs/design.md",
-      "dependsOn": ["US-001"]
-    },
-    {
-      "id": "US-006",
-      "title": "Student Routes — Dashboard and Exercise Pages",
-      "description": "As a student, I want to navigate from my dashboard to any exercise page and see the correct template rendered.",
-      "acceptanceCriteria": [
-        "GET /s/:token renders dashboard with today's board and exercise cards with correct status",
-        "GET /s/:token/exercise/:exerciseId renders correct template based on exercise type",
-        "Already-submitted exercises render in read-only feedback mode",
-        "Returns 404 for invalid token or exercise ID",
-        "Session cookie set on first token URL visit",
-        "If no board for today shows Tus ejercicios estan siendo preparados message",
-        "npm run build passes",
-        "npm run test passes"
-      ],
-      "priority": 3,
-      "passes": false,
-      "notes": "This wires dashboard + exercise page rendering. Can handle missing templates gracefully.",
-      "dependsOn": ["US-001"]
-    },
-    {
-      "id": "US-007",
-      "title": "Student Routes — Exercise Submission and Grading",
-      "description": "As a student, I want to submit exercise answers and receive instant feedback with a score.",
-      "acceptanceCriteria": [
-        "POST /s/:token/exercise/:exerciseId accepts JSON answers, grades, saves submission",
-        "Deterministic grading for long_reading, short_reading, vocabulary, fill_gap",
-        "AI grading for writing_micro via Claude API (clarity, grammar, vocabulary)",
-        "Returns JSON { score, maxScore, feedback } for client-side update",
-        "Vocabulary submission adds all 6 words to user word_bank",
-        "Prevents duplicate submissions (returns existing feedback)",
-        "npm run build passes",
-        "npm run test passes"
+        "Dashboard uses CSS grid masonry-style layout (use grid-template-rows with different spans, or CSS columns)",
+        "Exercise cards have different sizes: long reading gets the largest card (spans 2 rows), short reading medium, vocabulary/fill-gap/writing smaller cards",
+        "Each card shows: exercise type label (kicker), title or excerpt, status badge (Disponible or score)",
+        "Cards are clickable and link to the exercise page",
+        "Layout is responsive: on mobile (< 600px), single column stack; on desktop, 2-3 column masonry",
+        "Overall feel: like a real newspaper front page with varied article sizes, not a uniform list",
+        "Keep the masthead (The IELTS Daily + date) at the top",
+        "npm run build passes"
       ],
       "priority": 4,
       "passes": false,
-      "notes": "Depends on exercise templates existing for the POST to make sense, but grading logic is independent.",
-      "dependsOn": ["US-006"]
+      "notes": "Think NYT or Guardian front page layout. Use CSS grid with explicit row spans for different card sizes. The long reading is the 'lead story' taking up the most space.",
+      "dependsOn": []
     },
     {
-      "id": "US-008",
-      "title": "Student Routes — Stats Page",
-      "description": "As a student, I want a statistics page with streak, heatmap, and score history.",
+      "id": "US-005",
+      "title": "Add ASCII topic illustration to dashboard",
+      "description": "As a student, I want to see a visual illustration related to today's topic on the dashboard, rendered as ASCII or dithered art.",
       "acceptanceCriteria": [
-        "GET /s/:token/stats renders stats page",
-        "src/templates/stats.ts rewritten for 21-point daily max",
-        "Shows current streak and longest streak",
-        "Shows total exercises completed and total boards completed",
-        "16-week activity heatmap with 4 intensity levels (0-21 scale)",
-        "Recent history: last 20 submissions with date, exercise type, score",
-        "Responsive layout, dark mode support",
-        "npm run build passes",
-        "npm run test passes"
-      ],
-      "priority": 3,
-      "passes": false,
-      "notes": "See specs/gamification.md and specs/design.md",
-      "dependsOn": ["US-001"]
-    },
-    {
-      "id": "US-009",
-      "title": "Email Template Update",
-      "description": "As a student, I want a simple daily email with a link to today's exercises.",
-      "acceptanceCriteria": [
-        "src/templates/email.ts rewritten with simplified template",
-        "Subject line: Tu practica de hoy esta lista (fixed)",
-        "Body: greeting with name, topic, single CTA button Comenzar linking to /s/:token",
-        "Template: white background, max 480px, red #CC0000 button",
-        "src/services/email.ts updated: sendInviteEmail accepts topic instead of article title",
-        "npm run build passes",
-        "npm run test passes"
-      ],
-      "priority": 3,
-      "passes": false,
-      "notes": "See specs/email.md",
-      "dependsOn": ["US-001"]
-    },
-    {
-      "id": "US-010",
-      "title": "Admin Dashboard Template",
-      "description": "As an admin, I want a dashboard to preview exercises, see stats, manage topics, and control the app.",
-      "acceptanceCriteria": [
-        "src/templates/admin.ts created",
-        "Today's Edition section: topic, status badge, 5 exercise cards with expandable preview, action buttons",
-        "Readership metrics: 4 cards (active users, avg completion, avg score, active streaks)",
-        "Users table: name, email, streak, last active, completed today, actions",
-        "Email log table: last 30 entries",
-        "Settings form: recipients, from_email, cron_schedule, base_url, difficulty dropdown",
-        "Topic queue section: list with reorder, add, remove, force-next controls",
-        "Clean functional design: Inter font, white background, no newspaper aesthetic",
-        "npm run build passes",
-        "npm run test passes"
+        "One of the masonry cards on the dashboard displays an ASCII art illustration related to today's topic",
+        "The ASCII art is generated as part of daily board generation: add an 'illustration' field to the board content",
+        "In src/services/content.ts generateBoard(), add a Claude API call that generates ASCII art (30-40 chars wide, 15-20 lines tall) for the topic using block characters and simple shapes",
+        "The ASCII art is stored in the boards table (add an 'illustration' TEXT column)",
+        "Display in a <pre> tag with monospace font, styled to fit the masonry card",
+        "Art should be simple, recognizable silhouettes — think: dinosaur outline, coral reef shapes, mountain range, etc.",
+        "npm run build passes"
       ],
       "priority": 5,
       "passes": false,
-      "notes": "See specs/admin.md for full layout. Desktop-first, no dark mode.",
-      "dependsOn": ["US-001"]
+      "notes": "The user wants visual interest on the dashboard. ASCII art generated by Claude for each topic. Keep it simple — silhouettes and outlines, not photorealistic. Store in DB alongside the board.",
+      "dependsOn": ["US-004"]
     },
     {
-      "id": "US-011",
-      "title": "Admin Routes — Full Implementation",
-      "description": "As an admin, I want all admin API endpoints working so dashboard actions function.",
+      "id": "US-006",
+      "title": "Compact activity heatmap",
+      "description": "As a student, I want the streak and activity section to take less vertical space on the dashboard.",
       "acceptanceCriteria": [
-        "GET /admin renders admin dashboard with all data",
-        "POST /admin/generate creates today's board with optional topic",
-        "POST /admin/regenerate deletes and regenerates board",
-        "POST /admin/exercise/:id/regenerate regenerates single exercise",
-        "POST /admin/email sends daily email and logs result",
-        "POST /admin/settings saves settings",
-        "POST /admin/users/add creates user with UUID token",
-        "POST /admin/users/:id/remove deletes user and related data",
-        "GET /admin/users/:id returns JSON detail",
-        "POST /admin/topics/reorder, /add, /remove, /force all work",
-        "GET /api/board/today, /api/stats, /api/logs, /api/topics return correct JSON",
-        "HTTP Basic Auth on all admin routes",
-        "npm run build passes",
-        "npm run test passes"
+        "Reduce heatmap from 16 weeks to 8 weeks (56 days)",
+        "Use smaller cells: 8px x 8px with 2px gap instead of current 14px",
+        "Heatmap renders horizontally compact — should take no more than ~60px height total",
+        "Streak number and heatmap sit side by side on desktop (not stacked)",
+        "On mobile: streak above, heatmap below, both compact",
+        "Remove day-of-week labels (Mon, Wed, Fri) to save space — just show the colored grid",
+        "npm run build passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "The current heatmap dominates the dashboard. Make it a subtle accent, not the hero. Think of it as a small badge/ribbon, not a full section.",
+      "dependsOn": []
+    },
+    {
+      "id": "US-007",
+      "title": "Admin dashboard — sidebar layout with shadcn-style design",
+      "description": "As an admin, I want a proper dashboard layout with sidebar navigation, not a single scrolling page.",
+      "acceptanceCriteria": [
+        "Admin dashboard uses a sidebar + main content layout (CSS grid: 240px sidebar, 1fr content)",
+        "Sidebar contains navigation links: Today's Board, Users, Topics, Email Log, Settings",
+        "Each nav item shows as a section in the main content area (use anchor links or show/hide sections with JS)",
+        "Sidebar is fixed/sticky on scroll",
+        "Design: clean, modern — Inter font throughout, subtle gray sidebar background (#F8F8F8), white content area, proper spacing",
+        "Topbar shows: app name, current date, admin user indicator",
+        "Settings is NOT always visible — it's its own section accessed from the sidebar, not appended at the bottom",
+        "Mobile: sidebar collapses to a hamburger menu",
+        "Overall aesthetic matches modern dashboards like Linear, Vercel, or shadcn examples — not a 90s admin panel",
+        "npm run build passes"
       ],
       "priority": 6,
       "passes": false,
-      "notes": "See specs/admin.md and specs/routes.md",
-      "dependsOn": ["US-010"]
+      "notes": "This is server-rendered HTML (Hono templates), not React. Build the layout with CSS grid and vanilla JS for section toggling. The user referenced shadcn — match that clean, minimal aesthetic with Inter font and subtle borders.",
+      "dependsOn": []
+    },
+    {
+      "id": "US-008",
+      "title": "Admin — improved tables with actions",
+      "description": "As an admin, I want proper data tables with sorting, row actions, and clean styling.",
+      "acceptanceCriteria": [
+        "Users table: columns for Name, Email, Streak, Last Active, Today (X/5), Total, Actions dropdown (View Dashboard, Remove)",
+        "Email log table: columns for Date, Topic, Recipients, Status badge (green/red), Duration, Actions (Resend for failed)",
+        "Topic queue table: columns for Position, Topic, Last Used, Times Used, Actions (Force Next, Remove)",
+        "Tables have: zebra striping (subtle alternating row backgrounds), hover highlight, proper padding",
+        "Action buttons use dropdown menus (click to expand) not inline links",
+        "Empty states: show 'No users yet' / 'No emails sent' with subtle message instead of empty table",
+        "npm run build passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Style tables to look like shadcn/Tanstack table — clean borders, good spacing, action dropdowns. All vanilla HTML/CSS/JS, no React.",
+      "dependsOn": ["US-007"]
+    },
+    {
+      "id": "US-009",
+      "title": "Server error logging and health endpoint",
+      "description": "As a developer, I want proper error logging so I can debug production issues from fly logs.",
+      "acceptanceCriteria": [
+        "All route handlers wrapped in try/catch that logs: timestamp, method, path, error message, stack trace",
+        "Use Hono's onError handler to catch unhandled errors globally",
+        "Log format: JSON lines — {timestamp, method, path, error, stack} so logs are grep-able",
+        "Add GET /health endpoint that returns 200 with {status: ok, timestamp, boardExists: bool}",
+        "Add request logging middleware: log method, path, status code, duration for every request",
+        "npm run build passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "This is critical infrastructure. Without proper logs, debugging production is blind. Fly.io captures stdout/stderr.",
+      "dependsOn": []
     }
   ]
 }
