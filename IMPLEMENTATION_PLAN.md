@@ -1,7 +1,7 @@
 # Implementation Plan — IELTS Daily
 
 Generated: 2026-04-02
-Status: 4 of 18 tasks complete
+Status: 5 of 18 tasks complete
 
 ## Summary
 
@@ -80,7 +80,7 @@ The current app has working infrastructure (Hono, SQLite, cron, email, Fly.io de
 ---
 
 ### [P1-2] Grading Service
-- **Status**: NOT STARTED
+- **Status**: DONE (2026-04-02)
 - **Description**: Create `src/services/grading.ts` with deterministic grading for exercises 1-4 and AI grading for exercise 5. Functions: `gradeLongReading(content, answers)` → compare user answers to correct answers in content JSON, return `{ score, feedback }` with per-question results. `gradeShortReading(content, answers)` → same pattern, 2 questions. `gradeVocabulary(content, answers)` → compare word-definition matches. `gradeFillGap(content, answers)` → compare blank fills to correct words. `gradeWritingMicro(content, answers)` → call Claude API to evaluate on clarity/grammar/vocabulary (3 dimensions, 0-1 each). All feedback JSON shapes must match `specs/database.md` submission feedback shapes.
 - **Acceptance Criteria**:
   - [ ] `gradeLongReading` returns integer score (0-5) and feedback JSON with per-question `{ correct, user_answer, correct_answer, explanation }`
