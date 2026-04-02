@@ -705,6 +705,138 @@ export function getEmailStats() {
 }
 
 // =============================================
+// Admin Stats
+// =============================================
+
+export function getActiveUsersToday(): number {
+  const today = new Date().toISOString().slice(0, 10);
+  const row = db.prepare(`
+    SELECT COUNT(DISTINCT s.user_id) as count
+    FROM submissions s
+    JOIN exercises e ON e.id = s.exercise_id
+    JOIN boards b ON b.id = e.board_id
+    WHERE b.date = ? AND s.score IS NOT NULL
+  `).get(today) as { count: number };
+  return row.count;
+}
+
+export function getAvgCompletionToday(): { avg: number; total: number } {
+  const today = new Date().toISOString().slice(0, 10);
+  const board = getBoardByDate(today);
+  if (!board) return { avg: 0, total: 0 };
+  const users = getAllUsers();
+  if (users.length === 0) return { avg: 0, total: 0 };
+
+  const exerciseCount = (db.prepare(
+    "SELECT COUNT(*) as count FROM exercises WHERE board_id = ?"
+  ).get(board.id) as { count: number }).count;
+
+  let totalCompleted = 0;
+  for (const user of users) {
+    const row = db.prepare(`
+      SELECT COUNT(*) as count FROM submissions s
+      JOIN exercises e ON e.id = s.exercise_id
+      WHERE s.user_id = ? AND e.board_id = ? AND s.score IS NOT NULL
+    `).get(user.id, board.id) as { count: number };
+    totalCompleted += row.count;
+  }
+  return { avg: totalCompleted / users.length, total: exerciseCount };
+}
+
+export function getAvgScoreToday(): number {
+  const today = new Date().toISOString().slice(0, 10);
+  const row = db.prepare(`
+    SELECT AVG(user_total) as avg FROM (
+      SELECT SUM(s.score) as user_total
+      FROM submissions s
+      JOIN exercises e ON e.id = s.exercise_id
+      JOIN boards b ON b.id = e.board_id
+      WHERE b.date = ? AND s.score IS NOT NULL
+      GROUP BY s.user_id
+    )
+  `).get(today) as { avg: number | null };
+  return row.avg ?? 0;
+}
+
+export function getActiveStreaksCount(): number {
+  const users = getAllUsers();
+  let count = 0;
+  for (const user of users) {
+    if (getCurrentStreak(user.id) >= 2) count++;
+  }
+  return count;
+}
+
+export interface AdminUserRow {
+  id: number;
+  name: string;
+  email: string;
+  token: string;
+  streak: number;
+  lastActive: string | null;
+  completedToday: number;
+  totalToday: number;
+  totalExercises: number;
+}
+
+export function getAdminUserRows(): AdminUserRow[] {
+  const users = getAllUsers();
+  const today = new Date().toISOString().slice(0, 10);
+  const board = getBoardByDate(today);
+
+  return users.map((u) => {
+    const streak = getCurrentStreak(u.id);
+    const totalExercises = getTotalSubmissions(u.id);
+
+    const lastActiveRow = db.prepare(`
+      SELECT MAX(b.date) as last_date FROM submissions s
+      JOIN exercises e ON e.id = s.exercise_id
+      JOIN boards b ON b.id = e.board_id
+      WHERE s.user_id = ? AND s.score IS NOT NULL
+    `).get(u.id) as { last_date: string | null };
+
+    let completedToday = 0;
+    let totalToday = 0;
+    if (board) {
+      const row = db.prepare(`
+        SELECT COUNT(*) as count FROM submissions s
+        JOIN exercises e ON e.id = s.exercise_id
+        WHERE s.user_id = ? AND e.board_id = ? AND s.score IS NOT NULL
+      `).get(u.id, board.id) as { count: number };
+      completedToday = row.count;
+      totalToday = (db.prepare(
+        "SELECT COUNT(*) as count FROM exercises WHERE board_id = ?"
+      ).get(board.id) as { count: number }).count;
+    }
+
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      token: u.token,
+      streak,
+      lastActive: lastActiveRow.last_date,
+      completedToday,
+      totalToday,
+      totalExercises,
+    };
+  });
+}
+
+export function getTopicHistoryEntries(limit = 30): TopicHistoryEntry[] {
+  return db.prepare(
+    "SELECT * FROM topic_history ORDER BY used_on DESC LIMIT ?"
+  ).all(limit) as TopicHistoryEntry[];
+}
+
+export function hasEmailBeenSentForBoard(boardId: number): boolean {
+  const row = db.prepare(
+    "SELECT COUNT(*) as count FROM email_log WHERE board_id = ? AND (status = 'sent' OR status = 'success')"
+  ).get(boardId) as { count: number };
+  return row.count > 0;
+}
+
+// =============================================
 // Deprecated — Transitional types and stubs.
 // These keep dependent files compiling until they
 // are rewritten in their respective tasks (P0-3, P1-3, P3-x).
