@@ -133,10 +133,16 @@ export function renderAdminDashboard(data: AdminData): string {
       <td class="mono">${completedDisplay}</td>
       <td class="mono">${u.totalExercises}</td>
       <td>
-        <a href="${esc(baseUrl)}/s/${esc(u.token)}" target="_blank" class="action-link">View</a>
-        <form method="POST" action="/admin/users/${u.id}/remove" style="display:inline" onsubmit="return confirm('Remove ${esc(u.name)}?')">
-          <button type="submit" class="action-link danger">Remove</button>
-        </form>
+        <div class="action-dropdown">
+          <button class="action-dropdown-btn" onclick="toggleDropdown(event)">Actions <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="action-dropdown-menu">
+            <a href="${esc(baseUrl)}/s/${esc(u.token)}" target="_blank" class="action-dropdown-item">View Dashboard</a>
+            <div class="action-dropdown-divider"></div>
+            <form method="POST" action="/admin/users/${u.id}/remove" onsubmit="return confirm('Remove ${esc(u.name)}?')">
+              <button type="submit" class="action-dropdown-item danger">Remove</button>
+            </form>
+          </div>
+        </div>
       </td>
     </tr>`;
   }).join("");
@@ -162,13 +168,26 @@ export function renderAdminDashboard(data: AdminData): string {
     const statusLabel = l.status === "sent" || l.status === "success" ? "Sent" : l.status === "partial_failure" ? "Partial" : "Failed";
     const duration = l.duration_ms ? `${(l.duration_ms / 1000).toFixed(1)}s` : "&mdash;";
     const recipientCount = l.recipients ? l.recipients.split(",").length : 0;
+    const isFailed = l.status === "error" || l.status === "partial_failure";
+    const actionsCell = isFailed
+      ? `<td>
+          <div class="action-dropdown">
+            <button class="action-dropdown-btn" onclick="toggleDropdown(event)">Actions <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="action-dropdown-menu">
+              <form method="POST" action="/admin/email">
+                <button type="submit" class="action-dropdown-item">Resend</button>
+              </form>
+            </div>
+          </div>
+        </td>`
+      : "<td></td>";
     return `<tr>
       <td class="mono">${esc(l.sent_at)}</td>
       <td>${l.topic ? esc(l.topic) : "&mdash;"}</td>
       <td class="mono">${recipientCount} recipient${recipientCount !== 1 ? "s" : ""}</td>
       <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
       <td class="mono">${duration}</td>
-      ${l.error ? `<td class="error-text" title="${esc(l.error)}">${esc(l.error.substring(0, 50))}</td>` : "<td></td>"}
+      ${actionsCell}
     </tr>`;
   }).join("");
 
@@ -176,7 +195,7 @@ export function renderAdminDashboard(data: AdminData): string {
     ${emailLogs.length === 0
       ? '<div class="empty-state">No emails sent yet.</div>'
       : `<div class="table-wrap"><table>
-        <thead><tr><th>Sent</th><th>Topic</th><th>Recipients</th><th>Status</th><th>Duration</th><th>Error</th></tr></thead>
+        <thead><tr><th>Sent</th><th>Topic</th><th>Recipients</th><th>Status</th><th>Duration</th><th>Actions</th></tr></thead>
         <tbody>${emailLogRows}</tbody>
       </table></div>`
     }`;
@@ -223,14 +242,20 @@ export function renderAdminDashboard(data: AdminData): string {
       <td>${esc(lastUsed)}</td>
       <td class="mono">${t.times_used}</td>
       <td>
-        <form method="POST" action="/admin/topics/force" style="display:inline">
-          <input type="hidden" name="topicId" value="${t.id}">
-          <button type="submit" class="action-link" title="Force as next topic">Force</button>
-        </form>
-        <form method="POST" action="/admin/topics/remove" style="display:inline" onsubmit="return confirm('Remove topic?')">
-          <input type="hidden" name="topicId" value="${t.id}">
-          <button type="submit" class="action-link danger">Remove</button>
-        </form>
+        <div class="action-dropdown">
+          <button class="action-dropdown-btn" onclick="toggleDropdown(event)">Actions <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="action-dropdown-menu">
+            <form method="POST" action="/admin/topics/force">
+              <input type="hidden" name="topicId" value="${t.id}">
+              <button type="submit" class="action-dropdown-item">Force Next</button>
+            </form>
+            <div class="action-dropdown-divider"></div>
+            <form method="POST" action="/admin/topics/remove" onsubmit="return confirm('Remove topic?')">
+              <input type="hidden" name="topicId" value="${t.id}">
+              <button type="submit" class="action-dropdown-item danger">Remove</button>
+            </form>
+          </div>
+        </div>
       </td>
     </tr>`;
   }).join("");
@@ -332,8 +357,21 @@ export function renderAdminDashboard(data: AdminData): string {
     table{width:100%;border-collapse:collapse}
     th{text-align:left;padding:10px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#737373;border-bottom:1px solid #e5e5e5;background:#fafafa}
     td{padding:10px 16px;font-size:13px;border-bottom:1px solid #f0f0f0}
-    tr:hover td{background:#fafafa}
+    tbody tr:nth-child(even) td{background:#fafafa}
+    tr:hover td{background:#f3f3f3}
     .mono{font-family:'JetBrains Mono',monospace;font-size:12px}
+
+    /* Action dropdown */
+    .action-dropdown{position:relative;display:inline-block}
+    .action-dropdown-btn{background:#fff;border:1px solid #d4d4d4;border-radius:5px;padding:4px 10px;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:#111;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .12s}
+    .action-dropdown-btn:hover{border-color:#111;background:#f5f5f5}
+    .action-dropdown-menu{display:none;position:absolute;right:0;top:calc(100% + 4px);min-width:160px;background:#fff;border:1px solid #e5e5e5;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:30;padding:4px 0;overflow:hidden}
+    .action-dropdown-menu.open{display:block}
+    .action-dropdown-item{display:block;width:100%;padding:7px 14px;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:#111;background:none;border:none;cursor:pointer;text-align:left;text-decoration:none;transition:background .1s}
+    .action-dropdown-item:hover{background:#f5f5f5}
+    .action-dropdown-item.danger{color:#dc2626}
+    .action-dropdown-item.danger:hover{background:#fef2f2}
+    .action-dropdown-divider{height:1px;background:#e5e5e5;margin:4px 0}
 
     /* Status badges */
     .status-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;display:inline-block}
@@ -522,6 +560,23 @@ export function renderAdminDashboard(data: AdminData): string {
   <div class="toast" id="toast"></div>
 
   <script>
+    // Action dropdown toggle
+    function toggleDropdown(e) {
+      e.stopPropagation();
+      var menu = e.currentTarget.nextElementSibling;
+      // Close all other open dropdowns first
+      document.querySelectorAll('.action-dropdown-menu.open').forEach(function(m) {
+        if (m !== menu) m.classList.remove('open');
+      });
+      menu.classList.toggle('open');
+    }
+    // Close dropdowns on outside click
+    document.addEventListener('click', function() {
+      document.querySelectorAll('.action-dropdown-menu.open').forEach(function(m) {
+        m.classList.remove('open');
+      });
+    });
+
     // Section navigation
     function showSection(id) {
       document.querySelectorAll('.page-section').forEach(function(s) { s.classList.remove('active'); });
