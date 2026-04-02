@@ -41,7 +41,7 @@ function buildMiniHeatmap(activityData: ActivityDay[]): string {
       const x = wk * step + 18, y = day * step + 14;
       let fill = "var(--cell-empty)";
       if (a?.submitted) {
-        const sn = parseFloat(a.score || "0");
+        const sn = a.score ?? 0;
         fill = sn >= 8 ? "var(--cell-4)" : sn >= 6 ? "var(--cell-3)" : sn >= 4 ? "var(--cell-2)" : "var(--cell-1)";
       }
       cells += `<rect x="${x}" y="${y}" width="${cs}" height="${cs}" fill="${fill}" rx="1"><title>${ds}${a?.submitted ? " — " + a.score : ""}</title></rect>`;

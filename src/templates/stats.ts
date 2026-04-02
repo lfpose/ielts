@@ -45,7 +45,7 @@ function buildHeatmap(activityData: ActivityDay[]): string {
         fill = "var(--cell-empty)";
       } else if (activity.submitted) {
         // Color intensity based on score
-        const scoreNum = parseFloat(activity.score || "0");
+        const scoreNum = activity.score ?? 0;
         if (scoreNum >= 8) fill = "var(--cell-4)";
         else if (scoreNum >= 6) fill = "var(--cell-3)";
         else if (scoreNum >= 4) fill = "var(--cell-2)";
@@ -100,7 +100,7 @@ export function renderStatsPage(
     <tr>
       <td class="td mono">${s.date}</td>
       <td class="td" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(s.article_title || "")}</td>
-      <td class="td score-cell">${s.score ? esc(s.score) : "&mdash;"}</td>
+      <td class="td score-cell">${s.score != null ? esc(String(s.score)) : "&mdash;"}</td>
     </tr>`
     )
     .join("");

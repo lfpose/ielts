@@ -191,7 +191,7 @@ function renderFeedback(submission: Submission): string {
   return `
     <div class="feedback-box">
       <div class="section-head">Resultados</div>
-      <div class="score-big">${esc(submission.score || "")}</div>
+      <div class="score-big">${esc(submission.score != null ? String(submission.score) : "")}</div>
       <div class="section-body">
         ${submission.feedback ? nl2p(submission.feedback) : ""}
       </div>

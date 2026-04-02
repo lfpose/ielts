@@ -9,15 +9,24 @@ mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const db = new Database(DB_PATH);
 db.pragma("journal_mode = WAL");
 
-// --- Migration ---
-db.exec(`DROP TABLE IF EXISTS feedback_log`);
-try { db.prepare("SELECT practice_id FROM email_log LIMIT 1").get(); } catch { db.exec("DROP TABLE IF EXISTS email_log"); }
-// Add slot column to daily_practices if missing
-try { db.prepare("SELECT slot FROM daily_practices LIMIT 1").get(); } catch {
-  try { db.exec("ALTER TABLE daily_practices ADD COLUMN slot TEXT NOT NULL DEFAULT 'reading'"); } catch { /* table doesn't exist yet */ }
+// --- Migration: Drop old tables (per specs/migration.md: full drop-and-recreate) ---
+const hasOldSchema = (() => {
+  try {
+    db.prepare("SELECT id FROM daily_practices LIMIT 1").get();
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+if (hasOldSchema) {
+  db.exec(`
+    DROP TABLE IF EXISTS submissions;
+    DROP TABLE IF EXISTS email_log;
+    DROP TABLE IF EXISTS daily_practices;
+    DROP TABLE IF EXISTS feedback_log;
+  `);
 }
-// Drop UNIQUE(date) by rebuilding table if needed (only on first run with new schema)
-// We can't drop constraints in SQLite, so we allow INSERT OR IGNORE to handle dupes
 
 // --- Schema ---
 db.exec(`
@@ -28,50 +37,132 @@ db.exec(`
     token TEXT UNIQUE NOT NULL,
     created_at TEXT DEFAULT (datetime('now'))
   );
+  CREATE INDEX IF NOT EXISTS idx_users_token ON users(token);
+  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
-  CREATE TABLE IF NOT EXISTS daily_practices (
+  CREATE TABLE IF NOT EXISTS boards (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL,
-    type TEXT NOT NULL DEFAULT 'reading',
-    slot TEXT NOT NULL DEFAULT 'reading',
-    article_title TEXT,
-    article_source TEXT,
-    article_url TEXT,
-    passage TEXT,
-    questions TEXT,
-    answer_key TEXT,
-    writing_prompt TEXT,
+    date TEXT UNIQUE NOT NULL,
+    topic TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now'))
   );
+  CREATE INDEX IF NOT EXISTS idx_boards_date ON boards(date);
+
+  CREATE TABLE IF NOT EXISTS exercises (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    board_id INTEGER NOT NULL REFERENCES boards(id),
+    slot INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    content JSON NOT NULL,
+    max_score INTEGER NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(board_id, slot)
+  );
+  CREATE INDEX IF NOT EXISTS idx_exercises_board ON exercises(board_id);
 
   CREATE TABLE IF NOT EXISTS submissions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id),
-    practice_id INTEGER NOT NULL REFERENCES daily_practices(id),
-    answers TEXT NOT NULL,
-    score TEXT,
-    feedback TEXT,
+    exercise_id INTEGER NOT NULL REFERENCES exercises(id),
+    answers JSON NOT NULL,
+    score INTEGER,
+    feedback JSON,
     submitted_at TEXT DEFAULT (datetime('now')),
-    UNIQUE(user_id, practice_id)
+    UNIQUE(user_id, exercise_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_submissions_user ON submissions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_submissions_exercise ON submissions(exercise_id);
+
+  CREATE TABLE IF NOT EXISTS word_bank (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    word TEXT NOT NULL,
+    definition TEXT NOT NULL,
+    context TEXT,
+    source_exercise_id INTEGER REFERENCES exercises(id),
+    learned_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(user_id, word)
+  );
+  CREATE INDEX IF NOT EXISTS idx_word_bank_user ON word_bank(user_id);
+
+  CREATE TABLE IF NOT EXISTS word_bank_seed (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    word TEXT UNIQUE NOT NULL,
+    difficulty TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS topic_queue (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    topic TEXT UNIQUE NOT NULL,
+    position INTEGER NOT NULL,
+    last_used_on TEXT,
+    times_used INTEGER DEFAULT 0,
+    forced_next INTEGER DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_topic_queue_position ON topic_queue(position);
+
+  CREATE TABLE IF NOT EXISTS topic_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    topic TEXT NOT NULL,
+    used_on TEXT NOT NULL,
+    board_id INTEGER REFERENCES boards(id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_topic_history_date ON topic_history(used_on);
+
+  CREATE TABLE IF NOT EXISTS email_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sent_at TEXT DEFAULT (datetime('now')),
+    board_id INTEGER REFERENCES boards(id),
+    recipients TEXT NOT NULL,
+    status TEXT NOT NULL,
+    error TEXT,
+    duration_ms INTEGER
   );
 
   CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
-
-  CREATE TABLE IF NOT EXISTS email_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    sent_at TEXT NOT NULL DEFAULT (datetime('now')),
-    practice_id INTEGER REFERENCES daily_practices(id),
-    recipients TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending',
-    error TEXT,
-    duration_ms INTEGER
-  );
 `);
 
-// --- Users ---
+// --- Pre-populate topic_queue with 20 topics from specs/content-pipeline.md ---
+const INITIAL_TOPICS = [
+  "Dinosaurs and prehistoric life",
+  "The Great Barrier Reef",
+  "How volcanoes work",
+  "The history of chocolate",
+  "Antarctica and its wildlife",
+  "How the human brain learns",
+  "The Amazon rainforest",
+  "Ancient Egypt and the pyramids",
+  "The water cycle and weather patterns",
+  "Octopuses and marine intelligence",
+  "The solar system and planets",
+  "How bridges are built",
+  "Migration patterns of birds",
+  "The invention of the printing press",
+  "Coral reefs and ocean ecosystems",
+  "Traditional foods around the world",
+  "The science of sleep",
+  "Mountains: how they form and erode",
+  "Bees and pollination",
+  "The history of maps and navigation",
+];
+
+const topicCount = (db.prepare("SELECT COUNT(*) as count FROM topic_queue").get() as { count: number }).count;
+if (topicCount === 0) {
+  const insertTopic = db.prepare("INSERT INTO topic_queue (topic, position) VALUES (?, ?)");
+  const insertMany = db.transaction((topics: string[]) => {
+    for (let i = 0; i < topics.length; i++) {
+      insertTopic.run(topics[i], i + 1);
+    }
+  });
+  insertMany(INITIAL_TOPICS);
+}
+
+// =============================================
+// Types
+// =============================================
 
 export interface User {
   id: number;
@@ -80,6 +171,90 @@ export interface User {
   token: string;
   created_at: string;
 }
+
+export interface Board {
+  id: number;
+  date: string;
+  topic: string;
+  created_at: string;
+}
+
+export type ExerciseType = "long_reading" | "short_reading" | "vocabulary" | "fill_gap" | "writing_micro";
+
+export interface Exercise {
+  id: number;
+  board_id: number;
+  slot: number;
+  type: ExerciseType;
+  content: string; // JSON string
+  max_score: number;
+  created_at: string;
+}
+
+export interface Submission {
+  id: number;
+  user_id: number;
+  exercise_id: number;
+  answers: string; // JSON string
+  score: number | null;
+  feedback: string | null; // JSON string
+  submitted_at: string;
+}
+
+export interface WordBankEntry {
+  id: number;
+  user_id: number;
+  word: string;
+  definition: string;
+  context: string | null;
+  source_exercise_id: number | null;
+  learned_at: string;
+}
+
+export interface WordBankSeedEntry {
+  id: number;
+  word: string;
+  difficulty: "basic" | "intermediate" | "advanced";
+}
+
+export interface TopicQueueEntry {
+  id: number;
+  topic: string;
+  position: number;
+  last_used_on: string | null;
+  times_used: number;
+  forced_next: number;
+}
+
+export interface TopicHistoryEntry {
+  id: number;
+  topic: string;
+  used_on: string;
+  board_id: number | null;
+}
+
+export interface ActivityDay {
+  date: string;
+  score: number | null;
+  submitted: boolean;
+}
+
+export interface ExerciseWithStatus extends Exercise {
+  completed: boolean;
+  user_score: number | null;
+}
+
+export interface BoardWithStatus {
+  board: Board;
+  exercises: ExerciseWithStatus[];
+  totalScore: number;
+  maxScore: number;
+  completedCount: number;
+}
+
+// =============================================
+// Users
+// =============================================
 
 export function getUserByToken(token: string): User | undefined {
   return db.prepare("SELECT * FROM users WHERE token = ?").get(token) as User | undefined;
@@ -99,148 +274,279 @@ export function createUser(email: string, name: string): User {
   return getUserByEmail(email)!;
 }
 
+export function deleteUser(id: number): void {
+  db.prepare("DELETE FROM word_bank WHERE user_id = ?").run(id);
+  db.prepare("DELETE FROM submissions WHERE user_id = ?").run(id);
+  db.prepare("DELETE FROM users WHERE id = ?").run(id);
+}
+
 export function ensureUser(email: string, name: string): User {
   return getUserByEmail(email) || createUser(email, name);
 }
 
-// --- Daily Practices ---
+// =============================================
+// Boards
+// =============================================
 
-export interface DailyPractice {
-  id: number;
-  date: string;
-  type: string;
-  slot: string;
-  article_title: string | null;
-  article_source: string | null;
-  article_url: string | null;
-  passage: string | null;
-  questions: string | null;
-  answer_key: string | null;
-  writing_prompt: string | null;
-  created_at: string;
+export function getBoardByDate(date: string): Board | undefined {
+  return db.prepare("SELECT * FROM boards WHERE date = ?").get(date) as Board | undefined;
 }
 
-export function getTodaysPractices(): DailyPractice[] {
+export function getBoardById(id: number): Board | undefined {
+  return db.prepare("SELECT * FROM boards WHERE id = ?").get(id) as Board | undefined;
+}
+
+export function getTodaysBoard(): Board | undefined {
   const today = new Date().toISOString().slice(0, 10);
-  return db.prepare("SELECT * FROM daily_practices WHERE date = ? ORDER BY slot").all(today) as DailyPractice[];
+  return getBoardByDate(today);
 }
 
-export function getTodaysPracticeBySlot(slot: string): DailyPractice | undefined {
-  const today = new Date().toISOString().slice(0, 10);
-  return db.prepare("SELECT * FROM daily_practices WHERE date = ? AND slot = ?").get(today, slot) as DailyPractice | undefined;
-}
-
-export function getPracticeById(id: number): DailyPractice | undefined {
-  return db.prepare("SELECT * FROM daily_practices WHERE id = ?").get(id) as DailyPractice | undefined;
-}
-
-export function getPracticeByDate(date: string): DailyPractice | undefined {
-  return db.prepare("SELECT * FROM daily_practices WHERE date = ? AND slot = 'reading' LIMIT 1").get(date) as DailyPractice | undefined;
-}
-
-// Keep backwards compat
-export function getTodaysPractice(): DailyPractice | undefined {
-  return getTodaysPracticeBySlot("reading");
-}
-
-export function createDailyPractice(data: {
-  date: string;
-  type: string;
-  slot: string;
-  article_title?: string;
-  article_source?: string;
-  article_url?: string;
-  passage?: string;
-  questions?: string;
-  answer_key?: string;
-  writing_prompt?: string;
-}): DailyPractice {
-  const existing = db.prepare(
-    "SELECT * FROM daily_practices WHERE date = ? AND slot = ?"
-  ).get(data.date, data.slot) as DailyPractice | undefined;
+export function createBoard(date: string, topic: string): Board {
+  const existing = getBoardByDate(date);
   if (existing) return existing;
+  const result = db.prepare("INSERT INTO boards (date, topic) VALUES (?, ?)").run(date, topic);
+  return db.prepare("SELECT * FROM boards WHERE id = ?").get(result.lastInsertRowid) as Board;
+}
 
+export function deleteBoardByDate(date: string): void {
+  const board = getBoardByDate(date);
+  if (!board) return;
+  db.prepare("DELETE FROM submissions WHERE exercise_id IN (SELECT id FROM exercises WHERE board_id = ?)").run(board.id);
+  db.prepare("DELETE FROM exercises WHERE board_id = ?").run(board.id);
+  db.prepare("DELETE FROM topic_history WHERE board_id = ?").run(board.id);
+  db.prepare("DELETE FROM boards WHERE id = ?").run(board.id);
+}
+
+export function getRecentBoards(limit = 10): Board[] {
+  return db.prepare("SELECT * FROM boards ORDER BY date DESC LIMIT ?").all(limit) as Board[];
+}
+
+// =============================================
+// Exercises
+// =============================================
+
+export function getExercisesByBoardId(boardId: number): Exercise[] {
+  return db.prepare("SELECT * FROM exercises WHERE board_id = ? ORDER BY slot").all(boardId) as Exercise[];
+}
+
+export function getExerciseById(id: number): Exercise | undefined {
+  return db.prepare("SELECT * FROM exercises WHERE id = ?").get(id) as Exercise | undefined;
+}
+
+export function createExercise(data: {
+  board_id: number;
+  slot: number;
+  type: ExerciseType;
+  content: string;
+  max_score: number;
+}): Exercise {
   const result = db.prepare(
-    `INSERT INTO daily_practices (date, type, slot, article_title, article_source, article_url, passage, questions, answer_key, writing_prompt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    data.date, data.type, data.slot,
-    data.article_title || null, data.article_source || null, data.article_url || null,
-    data.passage || null, data.questions || null, data.answer_key || null,
-    data.writing_prompt || null
-  );
-  return db.prepare("SELECT * FROM daily_practices WHERE id = ?").get(result.lastInsertRowid) as DailyPractice;
+    "INSERT INTO exercises (board_id, slot, type, content, max_score) VALUES (?, ?, ?, ?, ?)"
+  ).run(data.board_id, data.slot, data.type, data.content, data.max_score);
+  return db.prepare("SELECT * FROM exercises WHERE id = ?").get(result.lastInsertRowid) as Exercise;
 }
 
-export function deleteTodaysPractices(): void {
-  const today = new Date().toISOString().slice(0, 10);
-  db.prepare("DELETE FROM submissions WHERE practice_id IN (SELECT id FROM daily_practices WHERE date = ?)").run(today);
-  db.prepare("DELETE FROM daily_practices WHERE date = ?").run(today);
+export function deleteExercise(id: number): void {
+  db.prepare("DELETE FROM submissions WHERE exercise_id = ?").run(id);
+  db.prepare("DELETE FROM exercises WHERE id = ?").run(id);
 }
 
-// Keep old name as alias
-export function deleteTodaysPractice(): void {
-  deleteTodaysPractices();
+export function deleteExercisesByBoardId(boardId: number): void {
+  db.prepare("DELETE FROM submissions WHERE exercise_id IN (SELECT id FROM exercises WHERE board_id = ?)").run(boardId);
+  db.prepare("DELETE FROM exercises WHERE board_id = ?").run(boardId);
 }
 
-// --- Submissions ---
+// =============================================
+// Submissions
+// =============================================
 
-export interface Submission {
-  id: number;
-  user_id: number;
-  practice_id: number;
-  answers: string;
-  score: string | null;
-  feedback: string | null;
-  submitted_at: string;
-}
-
-export function getSubmission(userId: number, practiceId: number): Submission | undefined {
+export function getSubmission(userId: number, exerciseId: number): Submission | undefined {
   return db.prepare(
-    "SELECT * FROM submissions WHERE user_id = ? AND practice_id = ?"
-  ).get(userId, practiceId) as Submission | undefined;
+    "SELECT * FROM submissions WHERE user_id = ? AND exercise_id = ?"
+  ).get(userId, exerciseId) as Submission | undefined;
 }
 
-export function createSubmission(userId: number, practiceId: number, answers: string): number {
+export function createSubmission(userId: number, exerciseId: number, answers: string): number {
   return db.prepare(
-    "INSERT INTO submissions (user_id, practice_id, answers) VALUES (?, ?, ?)"
-  ).run(userId, practiceId, answers).lastInsertRowid as number;
+    "INSERT INTO submissions (user_id, exercise_id, answers) VALUES (?, ?, ?)"
+  ).run(userId, exerciseId, answers).lastInsertRowid as number;
 }
 
-export function updateSubmissionFeedback(id: number, score: string, feedback: string): void {
-  db.prepare("UPDATE submissions SET score = ?, feedback = ? WHERE id = ?").run(score, feedback, id);
+export function updateSubmissionFeedback(id: number, score: number | string, feedback: string): void {
+  const numScore = typeof score === "number" ? score : parseInt(score, 10) || 0;
+  db.prepare("UPDATE submissions SET score = ?, feedback = ? WHERE id = ?").run(numScore, feedback, id);
 }
 
-// --- Stats ---
-
-export interface ActivityDay {
-  date: string;
-  score: string | null;
-  submitted: boolean;
+export function getSubmissionsByUserAndBoard(userId: number, boardId: number): Submission[] {
+  return db.prepare(`
+    SELECT s.* FROM submissions s
+    JOIN exercises e ON e.id = s.exercise_id
+    WHERE s.user_id = ? AND e.board_id = ?
+    ORDER BY e.slot
+  `).all(userId, boardId) as Submission[];
 }
 
-export function getActivityData(userId: number, days = 182): ActivityDay[] {
+// =============================================
+// Word Bank
+// =============================================
+
+export function addToWordBank(
+  userId: number,
+  word: string,
+  definition: string,
+  context: string | null,
+  sourceExerciseId: number | null
+): void {
+  db.prepare(
+    "INSERT OR IGNORE INTO word_bank (user_id, word, definition, context, source_exercise_id) VALUES (?, ?, ?, ?, ?)"
+  ).run(userId, word, definition, context, sourceExerciseId);
+}
+
+export function getUserWordBank(userId: number): WordBankEntry[] {
+  return db.prepare("SELECT * FROM word_bank WHERE user_id = ? ORDER BY learned_at DESC").all(userId) as WordBankEntry[];
+}
+
+export function getUserWordBankCount(userId: number): number {
+  return (db.prepare("SELECT COUNT(*) as count FROM word_bank WHERE user_id = ?").get(userId) as { count: number }).count;
+}
+
+export function getRandomUserWords(userId: number, limit: number): WordBankEntry[] {
+  return db.prepare("SELECT * FROM word_bank WHERE user_id = ? ORDER BY RANDOM() LIMIT ?").all(userId, limit) as WordBankEntry[];
+}
+
+export function getRandomSeedWords(limit: number, difficulty?: string): WordBankSeedEntry[] {
+  if (difficulty) {
+    return db.prepare("SELECT * FROM word_bank_seed WHERE difficulty = ? ORDER BY RANDOM() LIMIT ?").all(difficulty, limit) as WordBankSeedEntry[];
+  }
+  return db.prepare("SELECT * FROM word_bank_seed ORDER BY RANDOM() LIMIT ?").all(limit) as WordBankSeedEntry[];
+}
+
+export function getSeedWordCount(): number {
+  return (db.prepare("SELECT COUNT(*) as count FROM word_bank_seed").get() as { count: number }).count;
+}
+
+export function insertSeedWord(word: string, difficulty: string): void {
+  db.prepare("INSERT OR IGNORE INTO word_bank_seed (word, difficulty) VALUES (?, ?)").run(word, difficulty);
+}
+
+export function insertSeedWords(words: Array<{ word: string; difficulty: string }>): void {
+  const insert = db.prepare("INSERT OR IGNORE INTO word_bank_seed (word, difficulty) VALUES (?, ?)");
+  const insertMany = db.transaction((items: Array<{ word: string; difficulty: string }>) => {
+    for (const item of items) {
+      insert.run(item.word, item.difficulty);
+    }
+  });
+  insertMany(words);
+}
+
+// =============================================
+// Topic Queue
+// =============================================
+
+export function getNextTopic(): TopicQueueEntry | undefined {
+  // Forced topics first
+  const forced = db.prepare(
+    "SELECT * FROM topic_queue WHERE forced_next = 1 ORDER BY position LIMIT 1"
+  ).get() as TopicQueueEntry | undefined;
+  if (forced) return forced;
+
+  // Then top of queue, skipping topics used in the last 20 days
+  return db.prepare(`
+    SELECT * FROM topic_queue
+    WHERE (last_used_on IS NULL OR last_used_on <= date('now', '-20 days'))
+    ORDER BY position
+    LIMIT 1
+  `).get() as TopicQueueEntry | undefined;
+}
+
+export function getAllTopics(): TopicQueueEntry[] {
+  return db.prepare("SELECT * FROM topic_queue ORDER BY position").all() as TopicQueueEntry[];
+}
+
+export function addTopic(topic: string): void {
+  const maxPos = (db.prepare("SELECT MAX(position) as max FROM topic_queue").get() as { max: number | null }).max ?? 0;
+  db.prepare("INSERT OR IGNORE INTO topic_queue (topic, position) VALUES (?, ?)").run(topic, maxPos + 1);
+}
+
+export function removeTopic(topicId: number): void {
+  db.prepare("DELETE FROM topic_queue WHERE id = ?").run(topicId);
+}
+
+export function reorderTopic(topicId: number, newPosition: number): void {
+  const topic = db.prepare("SELECT * FROM topic_queue WHERE id = ?").get(topicId) as TopicQueueEntry | undefined;
+  if (!topic) return;
+
+  const oldPosition = topic.position;
+  if (oldPosition === newPosition) return;
+
+  if (newPosition < oldPosition) {
+    db.prepare("UPDATE topic_queue SET position = position + 1 WHERE position >= ? AND position < ?").run(newPosition, oldPosition);
+  } else {
+    db.prepare("UPDATE topic_queue SET position = position - 1 WHERE position > ? AND position <= ?").run(oldPosition, newPosition);
+  }
+  db.prepare("UPDATE topic_queue SET position = ? WHERE id = ?").run(newPosition, topicId);
+}
+
+export function forceTopic(topicId: number): void {
+  db.prepare("UPDATE topic_queue SET forced_next = 0").run(); // clear any existing force
+  db.prepare("UPDATE topic_queue SET forced_next = 1 WHERE id = ?").run(topicId);
+}
+
+export function clearForceFlags(): void {
+  db.prepare("UPDATE topic_queue SET forced_next = 0").run();
+}
+
+export function markTopicUsed(topic: string, date: string): void {
+  db.prepare(
+    "UPDATE topic_queue SET last_used_on = ?, times_used = times_used + 1, forced_next = 0 WHERE topic = ?"
+  ).run(date, topic);
+}
+
+// =============================================
+// Topic History
+// =============================================
+
+export function logTopicUsage(topic: string, date: string, boardId: number): void {
+  db.prepare("INSERT INTO topic_history (topic, used_on, board_id) VALUES (?, ?, ?)").run(topic, date, boardId);
+}
+
+export function getRecentTopicHistory(days = 20): TopicHistoryEntry[] {
+  return db.prepare(
+    "SELECT * FROM topic_history WHERE used_on >= date('now', '-' || ? || ' days') ORDER BY used_on DESC"
+  ).all(days) as TopicHistoryEntry[];
+}
+
+// =============================================
+// Stats (updated for new exercises+submissions model, 21-point max)
+// =============================================
+
+export function getActivityData(userId: number, days = 112): ActivityDay[] {
   const rows = db.prepare(`
-    SELECT dp.date, s.score, 1 as submitted
-    FROM daily_practices dp
-    LEFT JOIN submissions s ON s.practice_id = dp.id AND s.user_id = ?
-    WHERE dp.date >= date('now', '-' || ? || ' days') AND dp.slot = 'reading'
-    ORDER BY dp.date ASC
-  `).all(userId, days) as Array<{ date: string; score: string | null; submitted: number }>;
+    SELECT b.date,
+      COALESCE(SUM(s.score), 0) as total_score,
+      COUNT(s.id) as submitted_count
+    FROM boards b
+    LEFT JOIN exercises e ON e.board_id = b.id
+    LEFT JOIN submissions s ON s.exercise_id = e.id AND s.user_id = ?
+    WHERE b.date >= date('now', '-' || ? || ' days')
+    GROUP BY b.date
+    ORDER BY b.date ASC
+  `).all(userId, days) as Array<{ date: string; total_score: number; submitted_count: number }>;
 
   return rows.map((r) => ({
     date: r.date,
-    score: r.score,
-    submitted: r.submitted === 1 && r.score !== null,
+    score: r.submitted_count > 0 ? r.total_score : null,
+    submitted: r.submitted_count > 0,
   }));
 }
 
 export function getCurrentStreak(userId: number): number {
   const rows = db.prepare(`
-    SELECT DISTINCT dp.date FROM daily_practices dp
-    JOIN submissions s ON s.practice_id = dp.id AND s.user_id = ?
+    SELECT DISTINCT b.date FROM boards b
+    JOIN exercises e ON e.board_id = b.id
+    JOIN submissions s ON s.exercise_id = e.id AND s.user_id = ?
     WHERE s.score IS NOT NULL
-    ORDER BY dp.date DESC
+    ORDER BY b.date DESC
   `).all(userId) as Array<{ date: string }>;
 
   if (rows.length === 0) return 0;
@@ -261,10 +567,11 @@ export function getCurrentStreak(userId: number): number {
 
 export function getLongestStreak(userId: number): number {
   const rows = db.prepare(`
-    SELECT DISTINCT dp.date FROM daily_practices dp
-    JOIN submissions s ON s.practice_id = dp.id AND s.user_id = ?
+    SELECT DISTINCT b.date FROM boards b
+    JOIN exercises e ON e.board_id = b.id
+    JOIN submissions s ON s.exercise_id = e.id AND s.user_id = ?
     WHERE s.score IS NOT NULL
-    ORDER BY dp.date ASC
+    ORDER BY b.date ASC
   `).all(userId) as Array<{ date: string }>;
 
   if (rows.length === 0) return 0;
@@ -284,55 +591,59 @@ export function getTotalSubmissions(userId: number): number {
   return row.count;
 }
 
-export function getRecentSubmissions(userId: number, limit = 20): Array<Submission & { date: string; article_title: string }> {
-  return db.prepare(`
-    SELECT s.*, dp.date, dp.article_title
-    FROM submissions s
-    JOIN daily_practices dp ON dp.id = s.practice_id
-    WHERE s.user_id = ? AND s.score IS NOT NULL
-    ORDER BY s.submitted_at DESC LIMIT ?
-  `).all(userId, limit) as any[];
+export function getTotalBoardsCompleted(userId: number): number {
+  const row = db.prepare(`
+    SELECT COUNT(DISTINCT b.id) as count FROM boards b
+    JOIN exercises e ON e.board_id = b.id
+    JOIN submissions s ON s.exercise_id = e.id AND s.user_id = ?
+    WHERE s.score IS NOT NULL
+  `).get(userId) as { count: number };
+  return row.count;
 }
 
-// --- Newspaper queries ---
-
-export interface PracticeWithStatus extends DailyPractice {
-  completed: boolean;
-  score: string | null;
+export function getTodaysBoardWithStatus(userId: number): BoardWithStatus | null {
+  const board = getTodaysBoard();
+  if (!board) return null;
+  return getBoardWithStatus(board, userId);
 }
 
-export function getTodaysPracticesWithStatus(userId: number): PracticeWithStatus[] {
-  const today = new Date().toISOString().slice(0, 10);
-  return db.prepare(`
-    SELECT dp.*,
-      CASE WHEN s.score IS NOT NULL THEN 1 ELSE 0 END as completed,
-      s.score
-    FROM daily_practices dp
-    LEFT JOIN submissions s ON s.practice_id = dp.id AND s.user_id = ?
-    WHERE dp.date = ?
-    ORDER BY dp.slot
-  `).all(userId, today) as any[];
+export function getBoardWithStatus(board: Board, userId: number): BoardWithStatus {
+  const exercises = getExercisesByBoardId(board.id);
+  const submissions = getSubmissionsByUserAndBoard(userId, board.id);
+  const submissionMap = new Map(submissions.map((s) => [s.exercise_id, s]));
+
+  const exercisesWithStatus: ExerciseWithStatus[] = exercises.map((e) => {
+    const sub = submissionMap.get(e.id);
+    return {
+      ...e,
+      completed: sub?.score != null,
+      user_score: sub?.score ?? null,
+    };
+  });
+
+  const totalScore = exercisesWithStatus.reduce((sum, e) => sum + (e.user_score ?? 0), 0);
+  const maxScore = exercisesWithStatus.reduce((sum, e) => sum + e.max_score, 0);
+  const completedCount = exercisesWithStatus.filter((e) => e.completed).length;
+
+  return { board, exercises: exercisesWithStatus, totalScore, maxScore, completedCount };
 }
 
-export function getRecentPracticesWithStatus(userId: number, limit = 10): PracticeWithStatus[] {
-  return db.prepare(`
-    SELECT dp.*,
-      CASE WHEN s.score IS NOT NULL THEN 1 ELSE 0 END as completed,
-      s.score
-    FROM daily_practices dp
-    LEFT JOIN submissions s ON s.practice_id = dp.id AND s.user_id = ?
-    WHERE dp.slot = 'reading'
-    ORDER BY dp.date DESC LIMIT ?
-  `).all(userId, limit) as any[];
+export function getRecentBoardsWithStatus(userId: number, limit = 10): BoardWithStatus[] {
+  const boards = getRecentBoards(limit);
+  return boards.map((b) => getBoardWithStatus(b, userId));
 }
 
-// --- Settings ---
+// =============================================
+// Settings
+// =============================================
 
 const DEFAULT_SETTINGS: Record<string, string> = {
   recipients: process.env.RECIPIENTS || "posemerani@gmail.com,npizarrocatalan@gmail.com",
   from_email: process.env.FROM_EMAIL || "ielts@example.com",
   cron_schedule: "0 7 * * *",
   cron_timezone: "UTC",
+  base_url: process.env.BASE_URL || "https://ielts-daily.fly.dev",
+  difficulty: "B2",
 };
 
 export function getSetting(key: string): string {
@@ -351,19 +662,21 @@ export function getAllSettings(): Record<string, string> {
   return result;
 }
 
-// --- Email Log ---
+// =============================================
+// Email Log
+// =============================================
 
-export function logEmail(practiceId: number, recipients: string, status: string, error?: string, durationMs?: number): void {
+export function logEmail(boardId: number, recipients: string, status: string, error?: string, durationMs?: number): void {
   db.prepare(
-    "INSERT INTO email_log (practice_id, recipients, status, error, duration_ms) VALUES (?, ?, ?, ?, ?)"
-  ).run(practiceId, recipients, status, error || null, durationMs || null);
+    "INSERT INTO email_log (board_id, recipients, status, error, duration_ms) VALUES (?, ?, ?, ?, ?)"
+  ).run(boardId, recipients, status, error || null, durationMs || null);
 }
 
 export function getRecentEmailLogs(limit = 30) {
   return db.prepare(`
-    SELECT el.*, dp.article_title, dp.date as practice_date
+    SELECT el.*, b.topic, b.date as board_date
     FROM email_log el
-    LEFT JOIN daily_practices dp ON dp.id = el.practice_id
+    LEFT JOIN boards b ON b.id = el.board_id
     ORDER BY el.id DESC LIMIT ?
   `).all(limit) as any[];
 }
@@ -377,5 +690,45 @@ export function getEmailStats() {
     FROM email_log
   `).get() as { total: number; success: number; error: number };
 }
+
+// =============================================
+// Deprecated — Transitional types and stubs.
+// These keep dependent files compiling until they
+// are rewritten in their respective tasks (P0-3, P1-3, P3-x).
+// =============================================
+
+export interface DailyPractice {
+  id: number;
+  date: string;
+  type: string;
+  slot: string;
+  article_title: string | null;
+  article_source: string | null;
+  article_url: string | null;
+  passage: string | null;
+  questions: string | null;
+  answer_key: string | null;
+  writing_prompt: string | null;
+  created_at: string;
+}
+
+export interface PracticeWithStatus extends DailyPractice {
+  completed: boolean;
+  score: string | null;
+}
+
+export function getTodaysPractices(): DailyPractice[] { return []; }
+export function getTodaysPractice(): DailyPractice | undefined { return undefined; }
+export function getTodaysPracticeBySlot(_slot: string): DailyPractice | undefined { return undefined; }
+export function getPracticeById(_id: number): DailyPractice | undefined { return undefined; }
+export function getPracticeByDate(_date: string): DailyPractice | undefined { return undefined; }
+export function createDailyPractice(_data: Record<string, unknown>): DailyPractice {
+  throw new Error("Deprecated: daily_practices table no longer exists");
+}
+export function deleteTodaysPractices(): void {}
+export function deleteTodaysPractice(): void {}
+export function getTodaysPracticesWithStatus(_userId: number): PracticeWithStatus[] { return []; }
+export function getRecentPracticesWithStatus(_userId: number, _limit?: number): PracticeWithStatus[] { return []; }
+export function getRecentSubmissions(_userId: number, _limit?: number): Array<Submission & { date: string; article_title: string }> { return []; }
 
 export default db;
