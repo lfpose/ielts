@@ -1,7 +1,7 @@
 # Implementation Plan — IELTS Daily
 
 Generated: 2026-04-02
-Status: 5 of 18 tasks complete
+Status: 6 of 18 tasks complete
 
 ## Summary
 
@@ -98,7 +98,7 @@ The current app has working infrastructure (Hono, SQLite, cron, email, Fly.io de
 ---
 
 ### [P1-3] Daily Job Refactor
-- **Status**: NOT STARTED
+- **Status**: DONE (2026-04-02)
 - **Description**: Rewrite `runDailyJob()` in `src/index.ts` to use the new content pipeline. New flow: 1) Check if today's board exists → skip if yes. 2) Pick topic via `pickTopic()`. 3) Generate all 5 exercises via `generateBoard()`. 4) Save board + exercises to DB. 5) Log topic in `topic_history`. 6) Send daily email to all recipients with board topic and link. Retry generation up to 3 times on failure. Remove all references to old `daily_practices`, `fetchRandomArticle`, old question generation.
 - **Acceptance Criteria**:
   - [ ] `runDailyJob()` creates a board with 5 exercises for today's date
