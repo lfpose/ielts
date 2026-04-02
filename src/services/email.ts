@@ -12,19 +12,16 @@ export async function sendInviteEmail(
   to: string,
   userName: string,
   practiceUrl: string,
-  articleTitle: string
+  topic: string
 ): Promise<void> {
   const fromEmail = getFromEmail();
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric",
-  });
 
-  const html = buildInviteEmailHtml(userName, practiceUrl, articleTitle, today);
+  const html = buildInviteEmailHtml(userName, practiceUrl, topic);
 
   const { error } = await resend.emails.send({
     from: fromEmail,
     to: [to],
-    subject: `Tu práctica IELTS está lista — ${articleTitle}`,
+    subject: "Tu práctica de hoy está lista",
     html,
   });
 
