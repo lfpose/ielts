@@ -148,7 +148,7 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
       "Toast notification: fixed bottom banner 'X de 5 completados' fades in then out after 3 seconds",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "improvement",

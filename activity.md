@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-05
-**Tasks Completed:** 6 of 13 (7 tasks remaining in prd.md)
-**Current Task:** P3-6 complete
+**Tasks Completed:** 7 of 13 (6 tasks remaining in prd.md)
+**Current Task:** IMPROVE-3 complete
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,17 @@
 ---
 
 ## Session Log
+
+### 2026-04-05 — IMPROVE-3: Cross-cutting animations and completion celebration
+- Verified all 5 exercise templates already have feedback slide-in animations (slideIn @keyframes 300ms), staggered reveals (50ms per question), and score count-up animations (0 → final over 600ms cubic ease)
+- Added completion confetti to dashboard: CSS-only falling colored dots/shapes (40 pieces, 6 colors, 3 shapes) with confettiFall keyframe animation when all 5 exercises completed
+- Confetti shows only once per board day (sessionStorage key based on board date)
+- Added toast notification: fixed bottom banner showing "X de 5 completados" (or celebration message when all 5 done), fades in at 300ms and out at 3300ms
+- Toast and confetti containers conditionally rendered only when completedCount > 0 (toast) or completedCount === 5 (confetti)
+- data-board-date attribute added to two-col div for sessionStorage key
+- Files changed: src/templates/dashboard.ts
+- Build: passes with zero errors
+---
 
 ### 2026-04-05 — P3-6: Exercise Template — Writing Micro
 - Rewrote src/templates/exercise-writing.ts with all improvements-v2.md section 6 styles applied

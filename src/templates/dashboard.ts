@@ -340,6 +340,21 @@ export function renderDashboard(
     .ornament{text-align:center;padding:24px 0 6px;font-family:'Playfair Display',serif;font-size:16px;color:var(--muted);letter-spacing:.8em}
     .footer{text-align:center;padding:8px 0 20px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--n500);text-transform:uppercase;letter-spacing:2px}
 
+    /* TOAST */
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);font-family:'Inter',sans-serif;font-size:14px;font-weight:600;
+      padding:12px 28px;background:var(--fg);color:var(--bg);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);
+      opacity:0;transition:opacity .4s ease;z-index:1000;pointer-events:none;white-space:nowrap}
+    .toast.show{opacity:1}
+
+    /* CONFETTI */
+    .confetti-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:999}
+    .confetti-piece{position:absolute;top:-20px;width:10px;height:10px;opacity:0;animation:confettiFall 2.5s ease-in forwards}
+    @keyframes confettiFall{
+      0%{opacity:1;transform:translateY(0) rotate(0deg) scale(1)}
+      75%{opacity:1}
+      100%{opacity:0;transform:translateY(100vh) rotate(720deg) scale(0.5)}
+    }
+
     @media(max-width:600px){
       .shell{padding:16px 12px}
       .masthead h1{font-size:36px}
@@ -380,7 +395,7 @@ export function renderDashboard(
 
     ${todaysBoard ? `
     <!-- TWO-COLUMN: TOPIC + STREAK -->
-    <div class="two-col">
+    <div class="two-col" data-board-date="${esc(todaysBoard.board.date)}">
       <div class="col-left">
         <div class="topic-kicker">Tema del D&iacute;a</div>
         <div class="topic-headline">${esc(todaysBoard.board.topic)}</div>
@@ -442,6 +457,8 @@ export function renderDashboard(
     <div class="footer">The IELTS Daily &middot; Read &middot; Write &middot; Improve &middot; Repeat</div>
 
   </div>
+  ${todaysBoard && todaysBoard.completedCount > 0 ? `<div class="toast" id="toast">${todaysBoard.completedCount} de 5 completados${todaysBoard.completedCount === 5 ? " \\u2014 \\u00a1Felicidades! \\ud83c\\udf89" : ""}</div>` : ""}
+  ${todaysBoard && todaysBoard.completedCount === 5 ? `<div class="confetti-container" id="confetti"></div>` : ""}
   <script>
     function isDark(){var t=localStorage.getItem('theme')||'auto';return t==='dark'?true:t==='light'?false:window.matchMedia('(prefers-color-scheme:dark)').matches}
     function updateIcon(){var b=document.getElementById('themeBtn');if(b)b.textContent=isDark()?'\\u2600':'\\u263E'}
@@ -449,6 +466,32 @@ export function renderDashboard(
       var n=c==='auto'?(pd?'light':'dark'):c==='dark'?'light':'dark';localStorage.setItem('theme',n);
       document.documentElement.removeAttribute('data-theme');if(n==='dark')document.documentElement.setAttribute('data-theme','dark');else if(n==='light')document.documentElement.setAttribute('data-theme','light');updateIcon()}
     updateIcon();
+
+    /* Toast */
+    (function(){
+      var toast=document.getElementById('toast');
+      if(!toast)return;
+      setTimeout(function(){toast.classList.add('show')},300);
+      setTimeout(function(){toast.classList.remove('show')},3300);
+    })();
+
+    /* Confetti */
+    (function(){
+      var box=document.getElementById('confetti');
+      if(!box)return;
+      var key='confetti_shown_'+document.querySelector('[data-board-date]')?.getAttribute('data-board-date');
+      if(key&&sessionStorage.getItem(key))return;
+      var colors=['#CC0000','#F59E0B','#2D6A4F','#4A1942','#1A1A2E','#E8E8E4'];
+      var shapes=['border-radius:50%','border-radius:2px','border-radius:50%;width:6px;height:14px'];
+      for(var i=0;i<40;i++){
+        var el=document.createElement('div');
+        el.className='confetti-piece';
+        el.style.cssText='left:'+Math.random()*100+'%;background:'+colors[i%colors.length]+';'+shapes[i%shapes.length]+';animation-delay:'+(Math.random()*1.2).toFixed(2)+'s;animation-duration:'+(2+Math.random()*1.5).toFixed(2)+'s';
+        box.appendChild(el);
+      }
+      if(key)sessionStorage.setItem(key,'1');
+      setTimeout(function(){box.remove()},4000);
+    })();
   </script>
 </body>
 </html>`;
