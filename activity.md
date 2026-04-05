@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-05
-**Tasks Completed:** 8 of 13 (5 tasks remaining in prd.md)
-**Current Task:** IMPROVE-4 complete
+**Tasks Completed:** 9 of 13 (4 tasks remaining in prd.md)
+**Current Task:** P3-7 complete
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,20 @@
 ---
 
 ## Session Log
+
+### 2026-04-05 — P3-7: Student Routes — Full Wiring
+- Verified all student routes already fully implemented in src/routes/student.ts
+- GET /:token — dashboard with session cookie, board status, activity data, streaks
+- GET /:token/exercise/:exerciseId — type-specific template rendering with existing submission support
+- POST /:token/exercise/:exerciseId — full grading pipeline with client→grader→template transformations for all 5 types
+- GET /:token/stats — stats page with streak, heatmap, recent submissions
+- Session cookie: HTTP-only, SameSite=Lax, Secure in production, 1-year expiry
+- Vocabulary words added to word_bank on submission
+- Duplicate submission prevention (returns existing feedback)
+- 404 handling for invalid tokens and exercise IDs
+- Files: src/routes/student.ts (no changes needed — already complete)
+- Build: passes with zero errors
+---
 
 ### 2026-04-05 — IMPROVE-4: Landing page polish
 - Added ornamental horizontal rule (───── § ─────) between masthead and form section

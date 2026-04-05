@@ -179,7 +179,7 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
       "Return 404 for invalid token or exercise ID",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",
