@@ -8,6 +8,137 @@ Started: 2026-04-02
 - Grading in src/services/grading.ts — deterministic for exercises 1-4, AI-graded for writing
 - DB queries in src/db.ts, routes in src/routes/, templates in src/templates/
 - Design spec at specs/design.md — Playfair Display headings, Lora body, Inter UI, warm off-white palette
+- Admin template uses CSS grid layout with sidebar (240px) + main content (1fr), section show/hide via vanilla JS
 - Admin at specs/admin.md — clean functional design, Inter font, no newspaper aesthetic
 - ESM project: all imports need .js extension in TypeScript files
+- Client templates all POST { answers: { key: value } } objects; graders expect typed arrays — transformation lives in src/routes/student.ts
+- Grader feedback is wrapped in { results: [...] } but templates expect flat arrays with different field names — transformation also in student.ts
+- Route handler returns raw grader feedback to client (for reload) but stores transformed feedback in DB (for templates)
+- Exercise content JSON: readings have {title, passage}, writing has {prompt}, vocabulary has {words[]}, fill_gap has {text/paragraph}
+---
+
+## 2026-04-02 - US-001
+- Added data transformation layer in POST /s/:token/exercise/:exerciseId route handler
+- Transforms client POST body (flat objects) → grader input (typed arrays)
+- Transforms grader feedback → template-expected DB format (flat arrays, correct field names)
+- Added try/catch with JSON error logging for production debugging
+- Handles both client format and direct grader format for backwards compatibility with tests
+- Files changed: src/routes/student.ts
+- **Learnings for future iterations:**
+  - All 5 exercise templates send { answers: {...} } as flat key-value objects, not arrays
+  - Vocabulary client sends index pairs (wordIdx → defOrigIdx), needs content lookup to resolve to text
+  - Writing template reads submission.answers expecting { text: "..." } directly
+  - Templates render feedback on page reload (window.location.reload()), not from the POST response
+  - Tests send data in grader format directly, so transformations must be format-detecting
+---
+
+## 2026-04-02 - US-002
+- Added `stripOptionPrefix()` helper to both long_reading and short_reading templates
+- Strips leading `A) `, `B. `, etc. from AI-generated option text before display
+- Template already renders letter in `pill-label` span, so option text should be clean
+- Files changed: src/templates/exercise-long-reading.ts, src/templates/exercise-short-reading.ts
+- **Learnings for future iterations:**
+  - AI content generation includes letter prefixes in MC options inconsistently
+  - Stripping at render time is safer than modifying content generation prompts
+  - Regex `^[A-Da-d][).]\s*` covers common AI prefix patterns (A), a., B), etc.)
+---
+
+## 2026-04-02 - US-009
+- Added request logging middleware: JSON lines with method, path, status, duration_ms
+- Added global onError handler: catches unhandled errors, logs JSON with timestamp, method, path, error, stack
+- Added GET /health endpoint returning {status: "ok", timestamp, boardExists}
+- All changes in src/index.ts — middleware and error handler registered before routes
+- Files changed: src/index.ts
+- **Learnings for future iterations:**
+  - Hono's onError handler catches errors from all routes, including sub-routed apps
+  - Middleware registered with app.use("*", ...) runs for all routes including sub-routes
+  - Health endpoint registered before route mounting so it's not caught by auth middleware
+---
+
+## 2026-04-02 - US-003
+- Added CSS drop cap using ::first-letter pseudo-element on `.passage p:first-child`
+- Playfair Display 900, float left, 3.6em font-size, 0.8 line-height
+- Applied to both long_reading and short_reading templates
+- Files changed: src/templates/exercise-long-reading.ts, src/templates/exercise-short-reading.ts
+- **Learnings for future iterations:**
+  - CSS ::first-letter with float is the most browser-compatible drop cap approach
+  - Both reading templates have nearly identical CSS — could be shared but kept separate to match existing pattern
+  - Dark mode works automatically via var(--fg) for the letter color
+---
+
+## 2026-04-02 - US-004
+- Redesigned student dashboard from flat exercise list to CSS columns masonry grid
+- Long reading card spans full width (column-span: all) as lead story with large title and passage excerpt
+- Short reading gets medium card, vocabulary/fill-gap/writing get smaller cards
+- Each card shows: kicker label (exercise type), title/excerpt parsed from exercise content JSON, status badge
+- Added getExcerpt() helper that parses exercise content to extract titles and passage previews
+- Responsive: 3 columns on desktop, 2 on tablet (601-800px), 1 on mobile (<600px)
+- Files changed: src/templates/dashboard.ts
+- **Learnings for future iterations:**
+  - Exercise content JSON field contains parseable data: title+passage for readings, prompt for writing, words[] for vocabulary
+  - CSS columns property with break-inside: avoid is simpler than grid for masonry layouts
+  - column-span: all makes the lead story span the full width above the masonry grid
+  - ExerciseWithStatus type is exported from db.ts and includes the content field
+---
+
+## 2026-04-02 - US-006
+- Reduced heatmap from 16 weeks to 8 weeks (56 days)
+- Shrunk cell size from 12px to 8px with 2px gap (was 3px)
+- Removed month text labels — just colored grid cells
+- Changed stats-row from CSS grid to flexbox for side-by-side streak + heatmap layout
+- On mobile: flex-wrap puts heatmap on its own line below streak numbers
+- SVG viewBox adjusted: removed 18px left offset and 14px top offset for tighter fit
+- Files changed: src/templates/dashboard.ts
+- **Learnings for future iterations:**
+  - SVG heatmap dimensions are calculated from weeks * step + padding — reduce both for compactness
+  - Flexbox with flex-wrap is simpler than CSS grid for responsive side-by-side → stacked layouts
+  - With only 8 weeks, month labels add clutter — removing them keeps the grid clean
+---
+
+## 2026-04-02 - US-005
+- Added `illustration` TEXT column to boards table via ALTER TABLE migration
+- Added `generateIllustration()` in content.ts — Claude API call generating 30-40 char wide, 15-20 line ASCII art
+- Updated `GeneratedBoard` interface to include illustration field
+- Updated `createBoard()` to accept optional illustration parameter
+- ASCII art generated in parallel with other exercises during board generation
+- Added illustration masonry card to dashboard with `<pre>` tag and JetBrains Mono font
+- Updated all board creation flows: daily job (index.ts), admin generate and regenerate (admin.ts)
+- Files changed: src/db.ts, src/services/content.ts, src/templates/dashboard.ts, src/index.ts, src/routes/admin.ts
+- **Learnings for future iterations:**
+  - ALTER TABLE migration with try/catch on SELECT is a safe pattern for adding columns
+  - ASCII art from Claude needs cleanup — strip code block markers with regex
+  - Illustration generation runs in parallel with other exercises (no dependency)
+  - `createBoard()` third parameter is optional so existing callers without illustration still work
+---
+
+## 2026-04-02 - US-007
+- Redesigned admin dashboard from single scrolling page to sidebar + main content layout
+- CSS grid: 240px sidebar with nav links, 1fr main content area
+- Sidebar: sticky, #F8F8F8 background, SVG icons for each section, active state highlighting
+- Topbar: sticky, shows app name, date, and "Admin" badge
+- 5 sections toggled via vanilla JS: Today's Board, Users, Topics, Email Log, Settings
+- Settings is its own dedicated section accessed from sidebar, not appended at bottom
+- Mobile: sidebar hidden by default, hamburger button opens it as overlay with backdrop
+- Files changed: src/templates/admin.ts
+- **Learnings for future iterations:**
+  - CSS grid with `grid-template-columns: 240px 1fr` and `grid-template-rows: auto 1fr` creates clean app-shell layout
+  - `position: sticky` on sidebar needs explicit height (`calc(100vh - topbar)`) to work properly
+  - Section show/hide with `.active` class toggle is simpler than anchor-link scrolling for SPA-like feel
+  - Mobile sidebar needs overlay backdrop to prevent interaction with main content
+  - NAV_ITEMS array with SVG path data keeps sidebar DRY and easy to extend
+---
+
+## 2026-04-02 - US-008
+- Added zebra striping (alternating row backgrounds) to all admin tables
+- Converted inline action links/buttons to dropdown menus for Users, Topics, and Email Log tables
+- Users table dropdown: "View Dashboard" and "Remove" actions
+- Topics table dropdown: "Force Next" and "Remove" actions
+- Email Log table: "Resend" action appears only for failed emails
+- Added dropdown JS: toggle on click, close on outside click, only one open at a time
+- Files changed: src/templates/admin.ts
+- **Learnings for future iterations:**
+  - `e.stopPropagation()` on dropdown button prevents the document click handler from immediately closing it
+  - Close all other dropdowns before opening a new one for clean UX
+  - Zebra striping with `tbody tr:nth-child(even)` avoids styling the header row
+  - Form buttons inside dropdown items need to inherit the dropdown-item class styling
 ---
