@@ -73,7 +73,7 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
       "Apply all IMPROVE-2 styles: numbered cards, T/F/NG pills, MC badges, feedback animation",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",

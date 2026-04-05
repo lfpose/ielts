@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-05
-**Tasks Completed:** 2 of 13 (11 tasks remaining in prd.md)
-**Current Task:** IMPROVE-2 complete
+**Tasks Completed:** 3 of 13 (10 tasks remaining in prd.md)
+**Current Task:** P3-3 complete
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -29,6 +29,21 @@
 - Heatmap moved to standalone full-width section below cards: 16-week display, month labels above, day labels left (L/M/X/J/V/S/D), today cell with red border, tooltips in Spanish
 - Max width increased to 1000px per spec
 - Files changed: src/templates/dashboard.ts
+- Build: passes with zero errors
+---
+
+### 2026-04-05 — P3-3: Exercise Template — Short Reading
+- Rewrote src/templates/exercise-short-reading.ts with all IMPROVE-2 improvements applied
+- Added header bar: back link left, 'Ejercicio 2 de 5 · ~3 min' center, '~3 min' right, bottom border
+- Question cards: border-left 3px var(--muted), large JetBrains Mono question number, Inter 500 15px question text, n100 background
+- T/F/NG: three horizontal pill buttons with Spanish labels ('Verdadero' / 'Falso' / 'No se menciona'), 1.5px border, selected = dark bg white text
+- MC options: vertical stack with letter badges (A/B/C/D), selected = dark bg
+- Short answer: bottom-border-only text input, placeholder 'Tu respuesta (1-3 palabras)'
+- Submit button: clear disabled (muted bg, not-allowed cursor) vs enabled (dark bg, white text) states with 300ms transition
+- Feedback reveal: CSS slideIn animation 300ms, questions staggered 50ms delay, score counts up from 0 to final value over 600ms
+- Fixed question text rendering (questionText fallback for both statement and question fields)
+- Accent color uses green (--accent-green) matching exercise type color from dashboard
+- Files changed: src/templates/exercise-short-reading.ts
 - Build: passes with zero errors
 ---
 
