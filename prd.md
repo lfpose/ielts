@@ -41,7 +41,7 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
       "Move heatmap to standalone section below exercise cards: full width, 'ACTIVIDAD — ÚLTIMAS 16 SEMANAS' header, month labels above, day labels left",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "improvement",

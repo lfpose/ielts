@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-05
-**Tasks Completed:** 0 of 9 (9 tasks remaining in prd.md)
-**Current Task:** None started
+**Tasks Completed:** 1 of 13 (12 tasks remaining in prd.md)
+**Current Task:** IMPROVE-1 complete
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -20,4 +20,14 @@
 
 ## Session Log
 
-<!-- Agent will append dated entries here -->
+### 2026-04-05 — IMPROVE-1: Dashboard Redesign
+- Implemented two-column desktop layout: topic+illustration left, streak+heatmap right, with column rule divider
+- Topic headline: 'TEMA DEL DÍA' kicker, Playfair Display 900 36px, ASCII illustration in `<pre>` with JetBrains Mono
+- Streak widget: large 🔥 emoji, JetBrains Mono 700 48px number, warm amber tint background when streak > 7, motivational text when streak = 0
+- Progress bar: 8px height pill segments with gaps, green fill when all 5 done, 'X de 5 completados' label
+- Exercise cards: left 4px solid accent border per type (navy/green/purple/amber/dark-red), type label + symbol in accent color, time estimate, completed state with green tint
+- Heatmap moved to standalone full-width section below cards: 16-week display, month labels above, day labels left (L/M/X/J/V/S/D), today cell with red border, tooltips in Spanish
+- Max width increased to 1000px per spec
+- Files changed: src/templates/dashboard.ts
+- Build: passes with zero errors
+---

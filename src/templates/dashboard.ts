@@ -12,12 +12,28 @@ const EXERCISE_LABELS: Record<ExerciseType, string> = {
   writing_micro: "Escritura",
 };
 
-const EXERCISE_ICONS: Record<ExerciseType, string> = {
-  long_reading: "1",
-  short_reading: "2",
-  vocabulary: "3",
-  fill_gap: "4",
-  writing_micro: "5",
+const EXERCISE_ACCENT: Record<ExerciseType, string> = {
+  long_reading: "#1a1a2e",
+  short_reading: "#2d4a22",
+  vocabulary: "#4a1942",
+  fill_gap: "#3d2200",
+  writing_micro: "#1a0000",
+};
+
+const EXERCISE_SYMBOL: Record<ExerciseType, string> = {
+  long_reading: "¶",
+  short_reading: "§",
+  vocabulary: "Aa",
+  fill_gap: "__",
+  writing_micro: "✎",
+};
+
+const EXERCISE_TIME: Record<ExerciseType, string> = {
+  long_reading: "~8 min",
+  short_reading: "~3 min",
+  vocabulary: "~3 min",
+  fill_gap: "~3 min",
+  writing_micro: "~5 min",
 };
 
 function fmtDate(d: string): string {
@@ -42,14 +58,52 @@ function buildHeatmap(activityData: ActivityDay[]): string {
   const activityMap = new Map<string, ActivityDay>();
   for (const d of activityData) activityMap.set(d.date, d);
 
-  const weeks = 8;
-  const cs = 8, cg = 2, step = cs + cg;
-  const w = weeks * step + 20, h = 7 * step + 12;
+  const weeks = 16;
+  const cs = 14, cg = 3, step = cs + cg;
+  const labelW = 24;
+  const w = weeks * step + labelW + 4;
+  const monthH = 16;
+  const h = 7 * step + monthH + 4;
+
+  // Find start: go back 16 weeks from today, align to Monday
   const start = new Date(today);
-  start.setDate(start.getDate() - weeks * 7 + (7 - start.getDay()));
+  start.setDate(start.getDate() - (weeks * 7) + 1);
+  // Align to Monday (ISO: Mon=1)
+  const dow = start.getDay();
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  start.setDate(start.getDate() + mondayOffset);
 
-  let cells = "";
+  // Month labels
+  const months: { label: string; x: number }[] = [];
+  let lastMonth = -1;
+  for (let wk = 0; wk < weeks; wk++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + wk * 7);
+    const m = d.getMonth();
+    if (m !== lastMonth) {
+      const monthName = d.toLocaleDateString("es-ES", { month: "short" });
+      months.push({ label: monthName.charAt(0).toUpperCase() + monthName.slice(1), x: labelW + wk * step });
+      lastMonth = m;
+    }
+  }
 
+  const dayLabels = ["L", "M", "X", "J", "V", "S", "D"];
+  let svg = "";
+
+  // Month labels
+  for (const m of months) {
+    svg += `<text x="${m.x}" y="${monthH - 3}" font-family="Inter,sans-serif" font-size="9" fill="var(--n500)">${m.label}</text>`;
+  }
+
+  // Day labels
+  for (let day = 0; day < 7; day++) {
+    if (day % 2 === 0) {
+      svg += `<text x="0" y="${monthH + day * step + cs - 2}" font-family="Inter,sans-serif" font-size="9" fill="var(--n500)">${dayLabels[day]}</text>`;
+    }
+  }
+
+  // Cells
+  const todayStr = today.toISOString().slice(0, 10);
   for (let wk = 0; wk < weeks; wk++) {
     for (let day = 0; day < 7; day++) {
       const d = new Date(start);
@@ -57,18 +111,21 @@ function buildHeatmap(activityData: ActivityDay[]): string {
       if (d > today) continue;
       const ds = d.toISOString().slice(0, 10);
       const a = activityMap.get(ds);
-      const x = wk * step + 2, y = day * step + 2;
+      const x = labelW + wk * step;
+      const y = monthH + day * step;
       let fill = "var(--cell-empty)";
       if (a?.submitted) {
         const sn = a.score ?? 0;
-        // 21-point scale: 16+, 11-15, 6-10, 1-5
         fill = sn >= 16 ? "var(--cell-4)" : sn >= 11 ? "var(--cell-3)" : sn >= 6 ? "var(--cell-2)" : "var(--cell-1)";
       }
-      cells += `<rect x="${x}" y="${y}" width="${cs}" height="${cs}" fill="${fill}" rx="1"><title>${ds}${a?.submitted ? " — " + a.score + "/21" : ""}</title></rect>`;
+      const isToday = ds === todayStr;
+      const dayName = d.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+      const tooltip = a?.submitted ? `${a.score} puntos · ${dayName}` : dayName;
+      svg += `<rect x="${x}" y="${y}" width="${cs}" height="${cs}" fill="${fill}" rx="2"${isToday ? ` stroke="var(--red)" stroke-width="1.5"` : ""}><title>${tooltip}</title></rect>`;
     }
   }
 
-  return `<svg width="100%" viewBox="0 0 ${w} ${h}" style="max-width:${w}px;">${cells}</svg>`;
+  return `<svg width="100%" viewBox="0 0 ${w} ${h}" style="max-width:${w}px;">${svg}</svg>`;
 }
 
 function getExcerpt(content: string, type: ExerciseType): { title: string; excerpt: string } {
@@ -97,52 +154,42 @@ function getExcerpt(content: string, type: ExerciseType): { title: string; excer
   return { title: "", excerpt: "" };
 }
 
-const CARD_SIZE: Record<ExerciseType, string> = {
-  long_reading: "card-lg",
-  short_reading: "card-md",
-  vocabulary: "card-sm",
-  fill_gap: "card-sm",
-  writing_micro: "card-sm",
-};
-
-function renderMasonryCard(ex: ExerciseWithStatus, token: string): string {
+function renderExerciseCard(ex: ExerciseWithStatus, token: string, index: number): string {
   const label = EXERCISE_LABELS[ex.type] || ex.type;
+  const accent = EXERCISE_ACCENT[ex.type] || "var(--fg)";
+  const symbol = EXERCISE_SYMBOL[ex.type] || "";
+  const time = EXERCISE_TIME[ex.type] || "";
   const link = `/s/${esc(token)}/exercise/${ex.id}`;
-  const size = CARD_SIZE[ex.type] || "card-sm";
-  const { title, excerpt } = getExcerpt(ex.content, ex.type);
+  const { title } = getExcerpt(ex.content, ex.type);
   const done = ex.completed;
 
   const statusBadge = done
-    ? `<span class="card-badge done">${ex.user_score}/${ex.max_score}</span>`
-    : `<span class="card-badge avail">Disponible</span>`;
+    ? `<span class="ex-badge done">✓ ${ex.user_score}/${ex.max_score}</span>`
+    : `<span class="ex-badge avail">Disponible</span>`;
 
-  return `<a href="${link}" class="m-card ${size}${done ? " completed" : ""}">
-    <div class="card-kicker">${esc(label)}</div>
-    ${title ? `<div class="card-title">${esc(title)}</div>` : ""}
-    ${excerpt ? `<div class="card-excerpt">${esc(excerpt)}</div>` : ""}
-    <div class="card-foot">${statusBadge}</div>
+  return `<a href="${link}" class="ex-card${done ? " ex-done" : ""}" style="--accent:${accent}">
+    <div class="ex-accent"></div>
+    <div class="ex-body">
+      <div class="ex-head">
+        <span class="ex-symbol">${esc(symbol)}</span>
+        <span class="ex-type">${esc(label)}</span>
+        <span class="ex-time">${esc(time)}</span>
+      </div>
+      ${title ? `<div class="ex-title">${esc(title)}</div>` : `<div class="ex-title">Ejercicio ${index + 1}</div>`}
+      <div class="ex-foot">${statusBadge}</div>
+    </div>
   </a>`;
 }
 
-function renderIllustrationCard(illustration: string | null): string {
-  if (!illustration) return "";
-  return `<div class="m-card card-illus">
-    <div class="card-kicker">Ilustraci&oacute;n del D&iacute;a</div>
-    <pre class="illus-art">${esc(illustration)}</pre>
-  </div>`;
-}
-
-function renderExerciseCards(board: BoardWithStatus, token: string): string {
-  return board.exercises.map((ex) => renderMasonryCard(ex, token)).join("");
-}
-
 function renderProgressBar(board: BoardWithStatus): string {
+  const allDone = board.completedCount === 5;
   const segments = board.exercises.map((ex) => {
-    return `<div class="prog-seg ${ex.completed ? "filled" : "empty"}"></div>`;
+    const cls = ex.completed ? (allDone ? "filled all" : "filled") : "empty";
+    return `<div class="prog-seg ${cls}"></div>`;
   });
   return `<div class="progress">
     <div class="prog-bar">${segments.join("")}</div>
-    <div class="prog-label">${board.completedCount}/5 completados</div>
+    <div class="prog-label">${board.completedCount} de 5 completados</div>
   </div>`;
 }
 
@@ -175,9 +222,9 @@ export function renderDashboard(
   longestStreak: number,
   recentBoards: BoardWithStatus[]
 ): string {
-  // Filter out today's board from archive
   const today = new Date().toISOString().slice(0, 10);
   const archives = recentBoards.filter((b) => b.board.date !== today);
+  const warmStreak = currentStreak > 7;
 
   return `<!DOCTYPE html>
 <html>
@@ -186,7 +233,7 @@ export function renderDashboard(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The IELTS Daily</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block');
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=block');
     :root{--bg:#F9F9F7;--fg:#111;--muted:#E5E5E0;--red:#CC0000;--n100:#F5F5F5;--n500:#737373;--n600:#525252;
       --cell-empty:#EBEDF0;--cell-1:#9BE9A8;--cell-2:#40C463;--cell-3:#30A14E;--cell-4:#216E39;
       --correct:#2D6A4F}
@@ -202,7 +249,7 @@ export function renderDashboard(
       transition:background .2s,color .2s}
     a{color:var(--fg);text-decoration:none}
 
-    .shell{max-width:960px;margin:0 auto;padding:24px}
+    .shell{max-width:1000px;margin:0 auto;padding:24px}
 
     /* MASTHEAD */
     .masthead{border-bottom:4px double var(--fg);padding-bottom:10px;margin-bottom:6px}
@@ -216,55 +263,66 @@ export function renderDashboard(
     .btn-icon{background:none;border:1px solid var(--fg);color:var(--fg);width:30px;height:30px;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;vertical-align:middle;margin-left:6px}
     .btn-icon:hover{background:var(--fg);color:var(--bg)}
 
-    /* STATS ROW */
-    .stats-row{display:flex;align-items:center;gap:16px;border:1px solid var(--fg);padding:10px 16px;margin-bottom:24px}
-    .stat-cell{text-align:center;padding:0 12px;border-right:1px solid var(--muted);flex-shrink:0}
-    .stat-num{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500;line-height:1}
-    .stat-lbl{font-family:'Inter',sans-serif;font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--n500);margin-top:2px}
-    .stat-heatmap{display:flex;align-items:center;overflow-x:auto;flex:1;min-width:0}
+    /* TWO-COLUMN LAYOUT */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:28px;border:1px solid var(--muted)}
+    .col-left{padding:24px;border-right:1px solid var(--muted)}
+    .col-right{padding:24px}
 
-    /* TODAY'S BOARD */
-    .today-section{margin-bottom:28px}
-    .section-head{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:2px solid var(--fg);margin-bottom:16px;font-family:'Inter',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:3px}
-    .section-head span:last-child{font-weight:400;color:var(--n500);letter-spacing:1px;font-size:10px}
-    .today-topic{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;margin-bottom:16px;line-height:1.2}
+    /* TOPIC HEADLINE */
+    .topic-kicker{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:4px;color:var(--n500);margin-bottom:8px}
+    .topic-headline{font-family:'Playfair Display',serif;font-size:36px;font-weight:900;line-height:1.1;margin-bottom:12px}
+    .topic-meta{font-family:'Inter',sans-serif;font-size:11px;color:var(--n500);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+    .illus-box{text-align:center;margin-top:8px}
+    .illus-art{font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.3;white-space:pre;overflow-x:auto;color:var(--n500);margin:0;display:inline-block;text-align:left;max-width:64ch}
+    .illus-label{font-family:'Inter',sans-serif;font-size:9px;color:var(--n500);text-transform:uppercase;letter-spacing:2px;margin-top:6px}
+
+    /* STREAK WIDGET */
+    .streak-widget{margin-bottom:20px;padding:16px;border:1px solid var(--muted);text-align:center}
+    .streak-widget.warm{background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.3)}
+    .streak-fire{font-size:24px;line-height:1}
+    .streak-num{font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:700;line-height:1.1}
+    .streak-label{font-family:'Inter',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--n500);margin-top:2px}
+    .streak-record{font-family:'Inter',sans-serif;font-size:11px;color:var(--n500);margin-top:8px}
+    .streak-motive{font-family:'Lora',serif;font-size:13px;font-style:italic;color:var(--n500);margin-top:8px}
 
     /* PROGRESS BAR */
     .progress{margin-bottom:20px}
     .prog-bar{display:flex;gap:4px;margin-bottom:6px}
-    .prog-seg{flex:1;height:6px;border-radius:3px}
-    .prog-seg.filled{background:var(--correct)}
-    .prog-seg.empty{background:var(--muted)}
+    .prog-seg{flex:1;height:8px;border-radius:4px}
+    .prog-seg.filled{background:var(--fg)}
+    .prog-seg.filled.all{background:var(--correct)}
+    .prog-seg.empty{background:var(--muted);border:1px solid color-mix(in srgb,var(--muted) 70%,var(--fg))}
     .prog-label{font-family:'Inter',sans-serif;font-size:11px;color:var(--n500);text-transform:uppercase;letter-spacing:1px}
 
-    /* MASONRY GRID */
-    .masonry{columns:3;column-gap:16px}
-    .m-card{display:block;break-inside:avoid;margin-bottom:16px;padding:20px;border:1px solid var(--muted);transition:all .15s;cursor:pointer}
-    .m-card:hover{border-color:var(--fg)}
-    .m-card.completed{background:color-mix(in srgb, var(--correct) 6%, var(--bg))}
-    .card-kicker{font-family:'Inter',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--red);margin-bottom:8px}
-    .m-card.completed .card-kicker{color:var(--correct)}
-    .card-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;line-height:1.25;margin-bottom:8px}
-    .card-lg .card-title{font-size:24px}
-    .card-excerpt{font-family:'Lora',serif;font-size:14px;line-height:1.6;color:var(--n600);margin-bottom:12px}
-    .card-lg .card-excerpt{font-size:15px}
-    .card-foot{display:flex;justify-content:flex-end}
-    .card-badge{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;padding:3px 8px}
-    .card-badge.avail{color:var(--red);border:1px solid var(--red)}
-    .card-badge.done{color:var(--correct);border:1px solid var(--correct);font-family:'JetBrains Mono',monospace}
-    /* Illustration card */
-    .card-illus{break-inside:avoid;padding:16px;border:1px solid var(--muted);margin-bottom:16px}
-    .illus-art{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.3;white-space:pre;overflow-x:auto;color:var(--fg);margin:0}
+    /* SECTION HEAD */
+    .section-head{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:2px solid var(--fg);margin-bottom:16px;font-family:'Inter',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:3px}
+    .section-head span:last-child{font-weight:400;color:var(--n500);letter-spacing:1px;font-size:10px}
 
-    /* Card sizes — large gets more excerpt lines */
-    .card-lg .card-excerpt{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
-    .card-md .card-excerpt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-    .card-sm .card-excerpt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-    /* Large card spans full width on 3-col to act as lead */
-    .card-lg{column-span:all;margin-bottom:16px}
+    /* EXERCISE CARDS */
+    .ex-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
+    .ex-card{display:flex;border:1px solid var(--muted);transition:all .15s;cursor:pointer;text-decoration:none;color:var(--fg)}
+    .ex-card:hover{border-color:var(--fg);transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+    .ex-card.ex-done{background:#f0f7f0}
+    [data-theme="dark"] .ex-card.ex-done{background:rgba(45,106,79,0.1)}
+    @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .ex-card.ex-done{background:rgba(45,106,79,0.1)}}
+    .ex-accent{width:4px;flex-shrink:0;background:var(--accent)}
+    .ex-body{flex:1;padding:16px}
+    .ex-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .ex-symbol{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--accent);opacity:0.7}
+    .ex-type{font-family:'Inter',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent)}
+    .ex-time{font-family:'Inter',sans-serif;font-size:10px;color:var(--n500);margin-left:auto}
+    .ex-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;line-height:1.25;margin-bottom:8px}
+    .ex-foot{display:flex;justify-content:flex-end}
+    .ex-badge{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;padding:3px 8px}
+    .ex-badge.avail{color:var(--n500);border:1px solid var(--muted)}
+    .ex-badge.done{color:var(--correct);border:1px solid var(--correct);font-family:'JetBrains Mono',monospace}
+
+    /* HEATMAP SECTION */
+    .heatmap-section{margin-bottom:28px}
+    .heatmap-wrap{padding:16px;border:1px solid var(--muted);overflow-x:auto}
 
     /* NO BOARD */
-    .no-board{padding:48px 24px;text-align:center;border:1px solid var(--muted)}
+    .no-board{padding:48px 24px;text-align:center;border:1px solid var(--muted);margin-bottom:28px}
     .no-board p{font-size:15px;color:var(--n600);line-height:1.7}
     .no-board .title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;margin-bottom:8px;color:var(--fg)}
 
@@ -285,18 +343,17 @@ export function renderDashboard(
     @media(max-width:600px){
       .shell{padding:16px 12px}
       .masthead h1{font-size:36px}
-      .stats-row{flex-wrap:wrap;gap:8px;padding:8px 12px}
-      .stat-cell{padding:0 8px}
-      .stat-heatmap{flex-basis:100%;border-top:1px solid var(--muted);padding-top:8px}
-      .masonry{columns:1}
-      .card-lg{column-span:none}
-      .card-title{font-size:18px}
-      .card-lg .card-title{font-size:20px}
+      .two-col{grid-template-columns:1fr;border:none}
+      .col-left{border-right:none;border-bottom:1px solid var(--muted);padding:16px 0}
+      .col-right{padding:16px 0}
+      .topic-headline{font-size:28px}
+      .streak-num{font-size:36px}
+      .ex-grid{grid-template-columns:1fr}
       .arch-date{min-width:auto;font-size:10px}
       .arch-topic{font-size:14px}
     }
     @media(min-width:601px) and (max-width:800px){
-      .masonry{columns:2}
+      .ex-grid{grid-template-columns:repeat(2,1fr)}
     }
   </style>
   <script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})()</script>
@@ -321,36 +378,62 @@ export function renderDashboard(
       </span>
     </nav>
 
-    <!-- STATS -->
-    <div class="stats-row">
-      <div class="stat-cell">
-        <div class="stat-num" style="color:${currentStreak > 0 ? "var(--red)" : "var(--fg)"}">${currentStreak}</div>
-        <div class="stat-lbl">Racha actual</div>
+    ${todaysBoard ? `
+    <!-- TWO-COLUMN: TOPIC + STREAK -->
+    <div class="two-col">
+      <div class="col-left">
+        <div class="topic-kicker">Tema del D&iacute;a</div>
+        <div class="topic-headline">${esc(todaysBoard.board.topic)}</div>
+        <div class="topic-meta">5 ejercicios &middot; ~20 min</div>
+        ${todaysBoard.board.illustration ? `<div class="illus-box">
+          <pre class="illus-art">${esc(todaysBoard.board.illustration)}</pre>
+          <div class="illus-label">Ilustraci&oacute;n generada por IA</div>
+        </div>` : ""}
       </div>
-      <div class="stat-cell">
-        <div class="stat-num">${longestStreak}</div>
-        <div class="stat-lbl">Mejor racha</div>
+      <div class="col-right">
+        <div class="streak-widget${warmStreak ? " warm" : ""}">
+          <div class="streak-fire">&#x1F525;</div>
+          <div class="streak-num">${currentStreak}</div>
+          <div class="streak-label">d&iacute;as seguidos</div>
+          ${currentStreak === 0 ? `<div class="streak-motive">&iexcl;Empieza hoy!</div>` : ""}
+          <div class="streak-record">R&eacute;cord: ${longestStreak} d&iacute;as</div>
+        </div>
+        ${renderProgressBar(todaysBoard)}
       </div>
-      <div class="stat-heatmap">${buildHeatmap(activityData)}</div>
     </div>
 
-    <!-- TODAY'S BOARD -->
+    <!-- EXERCISE CARDS -->
     <div class="today-section">
       <div class="section-head">
-        <span>Ejercicios de hoy</span>
-        ${todaysBoard ? `<span>${fmtDate(todaysBoard.board.date)}</span>` : ""}
+        <span>Ejercicios de Hoy</span>
+        <span>${fmtDate(todaysBoard.board.date)}</span>
       </div>
-      ${
-        todaysBoard
-          ? `<div class="today-topic">${esc(todaysBoard.board.topic)}</div>
-             ${renderProgressBar(todaysBoard)}
-             <div class="masonry">${renderExerciseCards(todaysBoard, user.token)}${renderIllustrationCard(todaysBoard.board.illustration)}</div>`
-          : `<div class="no-board">
-               <div class="title">Sin tablero todav&iacute;a</div>
-               <p>Los ejercicios de hoy se generar&aacute;n pronto. Vuelve m&aacute;s tarde.</p>
-             </div>`
-      }
+      <div class="ex-grid">
+        ${todaysBoard.exercises.map((ex, i) => renderExerciseCard(ex, user.token, i)).join("")}
+      </div>
     </div>
+
+    <!-- HEATMAP -->
+    <div class="heatmap-section">
+      <div class="section-head">
+        <span>Actividad &mdash; &Uacute;ltimas 16 Semanas</span>
+      </div>
+      <div class="heatmap-wrap">${buildHeatmap(activityData)}</div>
+    </div>
+    ` : `
+    <div class="no-board">
+      <div class="title">Sin tablero todav&iacute;a</div>
+      <p>Los ejercicios de hoy se generar&aacute;n pronto. Vuelve m&aacute;s tarde.</p>
+    </div>
+
+    <!-- HEATMAP -->
+    <div class="heatmap-section">
+      <div class="section-head">
+        <span>Actividad &mdash; &Uacute;ltimas 16 Semanas</span>
+      </div>
+      <div class="heatmap-wrap">${buildHeatmap(activityData)}</div>
+    </div>
+    `}
 
     <!-- ARCHIVE -->
     ${renderArchive(archives, user.token)}
