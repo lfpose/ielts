@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-05
-**Tasks Completed:** 5 of 13 (8 tasks remaining in prd.md)
-**Current Task:** P3-5 complete
+**Tasks Completed:** 6 of 13 (7 tasks remaining in prd.md)
+**Current Task:** P3-6 complete
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,23 @@
 ---
 
 ## Session Log
+
+### 2026-04-05 — P3-6: Exercise Template — Writing Micro
+- Rewrote src/templates/exercise-writing.ts with all improvements-v2.md section 6 styles applied
+- Header bar: back link left, 'Ejercicio 5 de 5 · ~3 min' center, time estimate right
+- Prompt box: 4px left red border, 'CONSIGNA' label above (Inter 600 uppercase 10px letter-spacing 3px), Lora 400 italic 16px
+- Textarea: bottom-border-only style, min-height 120px, focus = border darkens to var(--fg)
+- Live word counter with correct thresholds: gray <15, green 15-90 with ✓, orange 91-100 with ⚠, red >100 with ✗ and 'Máximo: 100 palabras' message
+- Submit enabled only within 15-100 word range; disabled state = muted bg + not-allowed cursor
+- Feedback: three expandable cards (Claridad / Gramática / Vocabulario) with click-to-toggle, colored indicators (green ✓ / red ✗), score per dimension
+- Grammar corrections in diff-style box: 'Escribiste: [X]' → 'Mejor: [Y]' with reason
+- Score count-up animation (0 → final over 600ms with eased cubic)
+- Feedback slideIn animation 300ms with 50ms stagger per card
+- Dark-red accent color (--accent-darkred) matching exercise type from dashboard
+- practice.ts already deleted in prior session
+- Files changed: src/templates/exercise-writing.ts
+- Build: passes with zero errors
+---
 
 ### 2026-04-05 — P3-5: Exercise Template — Fill the Gap
 - Rewrote src/templates/exercise-fill-gap.ts with all improvements-v2.md section 5 styles applied
