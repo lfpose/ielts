@@ -223,7 +223,7 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
       "Settings form: recipients, from_email, cron_schedule, base_url, difficulty",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",
