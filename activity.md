@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-05
-**Tasks Completed:** 3 of 13 (10 tasks remaining in prd.md)
-**Current Task:** P3-3 complete
+**Tasks Completed:** 4 of 13 (9 tasks remaining in prd.md)
+**Current Task:** P3-4 complete
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,22 @@
 ---
 
 ## Session Log
+
+### 2026-04-05 — P3-4: Exercise Template — Vocabulary Match (full game)
+- Rewrote src/templates/exercise-vocabulary.ts as a full tap-to-pair matching game
+- Header bar: back link, 'Ejercicio 3 de 5 · ~3 min' center, time estimate right
+- Two-column grid: word cards (Playfair Display 700 16px, var(--n100) bg, 2px border, rounded 6px) left, definition cards (Inter 400 13px) right
+- Fisher-Yates shuffle seeded by exercise ID for consistent definition order on refresh
+- 6 pair colors from spec (sage green, soft blue, warm amber, soft purple, soft rose, soft teal) with bg + border combos
+- Connection animation: CSS pairBounce keyframe (scale 1.0 → 1.04 → 1.0) with 200ms transition
+- Interaction: tap word → selected state with 'Seleccionado' label → tap definition → pair with shared color; tap connected card to undo
+- Submit enables when all 6 paired; feedback shows correct (green) / incorrect (red) with context sentences
+- Score count-up animation (0 → final over 600ms with eased cubic)
+- Mobile: words-col becomes horizontal scroll row, definitions stacked below
+- Accent color uses purple (--accent-purple) matching exercise type from dashboard
+- Files changed: src/templates/exercise-vocabulary.ts
+- Build: passes with zero errors
+---
 
 ### 2026-04-05 — IMPROVE-1: Dashboard Redesign
 - Implemented two-column desktop layout: topic+illustration left, streak+heatmap right, with column rule divider
