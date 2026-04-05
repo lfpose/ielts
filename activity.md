@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-05
-**Tasks Completed:** 10 of 13 (3 tasks remaining in prd.md)
-**Current Task:** P4-1 complete
+**Tasks Completed:** 11 of 13 (2 tasks remaining in prd.md)
+**Current Task:** P4-2 complete
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,21 @@
 ---
 
 ## Session Log
+
+### 2026-04-05 — P4-2: Stats Page Rebuild
+- Rewrote src/templates/stats.ts to align with dashboard patterns and 5-exercise model
+- Heatmap: switched from English to Spanish labels (L/M/X/J/V/S/D days, Spanish month names), Monday-aligned weeks, red stroke for today, Spanish tooltips ("X puntos · dayName")
+- Heatmap intensity thresholds unified with dashboard: 16/11/6 on 0-21 scale (4 levels)
+- Streak display: fire emoji for active streaks, warm amber tint background when streak > 7
+- Exercise type badges: color-coded with accent colors matching dashboard (navy/green/purple/amber/dark-red) with left border accent and subtle background tint
+- Added dark mode toggle button in meta bar (matching dashboard pattern)
+- Added CSS variables for accent colors with dark mode variants
+- Stats grid: 4-column (2-col on mobile) with current streak, longest streak, total exercises, total boards
+- Recent history: last 20 submissions with date, type badge, score
+- Responsive layout, dark mode support via data-theme attribute + prefers-color-scheme
+- Files changed: src/templates/stats.ts
+- Build: passes with zero errors
+---
 
 ### 2026-04-05 — P4-1: Email Template Update
 - Verified email template and service already fully implement specs/email.md

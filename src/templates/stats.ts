@@ -12,84 +12,84 @@ const EXERCISE_LABELS: Record<ExerciseType, string> = {
   writing_micro: "Escritura",
 };
 
+const EXERCISE_ACCENT: Record<ExerciseType, string> = {
+  long_reading: "#1a3a5c",
+  short_reading: "#2e7d32",
+  vocabulary: "#5e35b1",
+  fill_gap: "#f59e0b",
+  writing_micro: "#991b1b",
+};
+
 function buildHeatmap(activityData: ActivityDay[]): string {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
   const activityMap = new Map<string, ActivityDay>();
   for (const d of activityData) activityMap.set(d.date, d);
 
   const weeks = 16;
-  const cellSize = 14;
-  const cellGap = 3;
-  const cellStep = cellSize + cellGap;
-  const width = weeks * cellStep + 30;
-  const height = 7 * cellStep + 24;
+  const cs = 14, cg = 3, step = cs + cg;
+  const labelW = 24;
+  const w = weeks * step + labelW + 4;
+  const monthH = 16;
+  const h = 7 * step + monthH + 4;
 
-  // Start from 16 weeks ago, aligned to Sunday
+  // Align start to Monday, 16 weeks back
   const start = new Date(today);
-  start.setDate(start.getDate() - (weeks * 7) + (7 - start.getDay()));
+  start.setDate(start.getDate() - (weeks * 7) + 1);
+  const dow = start.getDay();
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  start.setDate(start.getDate() + mondayOffset);
 
-  let cells = "";
-  const monthLabels: Array<{ x: number; label: string }> = [];
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  // Month labels (Spanish)
+  const months: { label: string; x: number }[] = [];
   let lastMonth = -1;
+  for (let wk = 0; wk < weeks; wk++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + wk * 7);
+    const m = d.getMonth();
+    if (m !== lastMonth) {
+      const monthName = d.toLocaleDateString("es-ES", { month: "short" });
+      months.push({ label: monthName.charAt(0).toUpperCase() + monthName.slice(1), x: labelW + wk * step });
+      lastMonth = m;
+    }
+  }
 
-  for (let week = 0; week < weeks; week++) {
+  const dayLabels = ["L", "M", "X", "J", "V", "S", "D"];
+  let svg = "";
+
+  for (const m of months) {
+    svg += `<text x="${m.x}" y="${monthH - 3}" font-family="Inter,sans-serif" font-size="9" fill="var(--n500)">${m.label}</text>`;
+  }
+
+  for (let day = 0; day < 7; day++) {
+    if (day % 2 === 0) {
+      svg += `<text x="0" y="${monthH + day * step + cs - 2}" font-family="Inter,sans-serif" font-size="9" fill="var(--n500)">${dayLabels[day]}</text>`;
+    }
+  }
+
+  const todayStr = today.toISOString().slice(0, 10);
+  for (let wk = 0; wk < weeks; wk++) {
     for (let day = 0; day < 7; day++) {
       const d = new Date(start);
-      d.setDate(d.getDate() + week * 7 + day);
+      d.setDate(d.getDate() + wk * 7 + day);
       if (d > today) continue;
-
-      const dateStr = d.toISOString().slice(0, 10);
-      const activity = activityMap.get(dateStr);
-      const x = week * cellStep + 28;
-      const y = day * cellStep + 20;
-
-      let fill: string;
-      if (!activity || !activity.submitted) {
-        fill = "var(--cell-empty)";
-      } else {
-        const scoreNum = activity.score ?? 0;
-        // 4 intensity levels on 0-21 scale
-        if (scoreNum >= 17) fill = "var(--cell-4)";
-        else if (scoreNum >= 9) fill = "var(--cell-3)";
-        else if (scoreNum >= 1) fill = "var(--cell-2)";
-        else fill = "var(--cell-1)";
+      const ds = d.toISOString().slice(0, 10);
+      const a = activityMap.get(ds);
+      const x = labelW + wk * step;
+      const y = monthH + day * step;
+      let fill = "var(--cell-empty)";
+      if (a?.submitted) {
+        const sn = a.score ?? 0;
+        fill = sn >= 16 ? "var(--cell-4)" : sn >= 11 ? "var(--cell-3)" : sn >= 6 ? "var(--cell-2)" : "var(--cell-1)";
       }
-
-      const isToday = dateStr === today.toISOString().slice(0, 10);
-      const stroke = isToday ? ` stroke="var(--fg)" stroke-width="1.5"` : "";
-
-      cells += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="${fill}" rx="2"${stroke}>
-        <title>${dateStr}${activity?.submitted ? ` — ${activity.score}/21` : ""}</title>
-      </rect>`;
-
-      if (day === 0 && d.getMonth() !== lastMonth) {
-        lastMonth = d.getMonth();
-        monthLabels.push({ x, label: months[d.getMonth()] });
-      }
+      const isToday = ds === todayStr;
+      const dayName = d.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+      const tooltip = a?.submitted ? `${a.score} puntos &middot; ${dayName}` : dayName;
+      svg += `<rect x="${x}" y="${y}" width="${cs}" height="${cs}" fill="${fill}" rx="2"${isToday ? ` stroke="var(--red)" stroke-width="1.5"` : ""}><title>${tooltip}</title></rect>`;
     }
   }
 
-  const dayLabels = ["", "Mon", "", "Wed", "", "Fri", ""];
-  let dayLabelsSvg = "";
-  for (let i = 0; i < 7; i++) {
-    if (dayLabels[i]) {
-      dayLabelsSvg += `<text x="0" y="${i * cellStep + 20 + 11}" fill="var(--n500)" font-size="10" font-family="'Inter',sans-serif">${dayLabels[i]}</text>`;
-    }
-  }
-
-  let monthLabelsSvg = "";
-  for (const ml of monthLabels) {
-    monthLabelsSvg += `<text x="${ml.x}" y="12" fill="var(--n500)" font-size="10" font-family="'Inter',sans-serif">${ml.label}</text>`;
-  }
-
-  return `<svg width="100%" viewBox="0 0 ${width} ${height}" style="max-width:${width}px;">
-    ${monthLabelsSvg}
-    ${dayLabelsSvg}
-    ${cells}
-  </svg>`;
+  return `<svg width="100%" viewBox="0 0 ${w} ${h}" style="max-width:${w}px;">${svg}</svg>`;
 }
 
 export function renderStatsPage(
@@ -112,6 +112,9 @@ export function renderStatsPage(
     )
     .join("");
 
+  const streakEmoji = currentStreak > 0 ? "&#x1F525;" : "";
+  const streakWarm = currentStreak > 7;
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -123,14 +126,17 @@ export function renderStatsPage(
     :root {
       --bg:#F9F9F7;--fg:#111;--muted:#E5E5E0;--red:#CC0000;--n100:#F5F5F5;--n500:#737373;--n600:#525252;
       --cell-empty:#EBEDF0;--cell-1:#9BE9A8;--cell-2:#40C463;--cell-3:#30A14E;--cell-4:#216E39;
+      --accent-navy:#1a3a5c;--accent-green:#2e7d32;--accent-purple:#5e35b1;--accent-amber:#f59e0b;--accent-darkred:#991b1b;
     }
     [data-theme="dark"]{
       --bg:#111;--fg:#E8E8E4;--muted:#2A2A28;--red:#FF4444;--n100:#1A1A1A;--n500:#888;--n600:#AAA;
       --cell-empty:#1A1A1A;--cell-1:#0E4429;--cell-2:#006D32;--cell-3:#26A641;--cell-4:#39D353;
+      --accent-navy:#5b9bd5;--accent-green:#66bb6a;--accent-purple:#b39ddb;--accent-amber:#ffd54f;--accent-darkred:#ef9a9a;
     }
     @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
       --bg:#111;--fg:#E8E8E4;--muted:#2A2A28;--red:#FF4444;--n100:#1A1A1A;--n500:#888;--n600:#AAA;
       --cell-empty:#1A1A1A;--cell-1:#0E4429;--cell-2:#006D32;--cell-3:#26A641;--cell-4:#39D353;
+      --accent-navy:#5b9bd5;--accent-green:#66bb6a;--accent-purple:#b39ddb;--accent-amber:#ffd54f;--accent-darkred:#ef9a9a;
     }}
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Lora',Georgia,serif;background:var(--bg);color:var(--fg);min-height:100vh;
@@ -144,6 +150,9 @@ export function renderStatsPage(
       font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--n500);text-transform:uppercase;letter-spacing:1px}
     .meta-bar a{color:var(--fg);text-decoration:none;border-bottom:1px solid var(--muted);font-family:'Inter',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:2px}
     .meta-bar a:hover{border-bottom-color:var(--red)}
+    .theme-btn{background:none;border:1px solid var(--muted);border-radius:4px;padding:4px 10px;font-family:'Inter',sans-serif;
+      font-size:11px;color:var(--n500);cursor:pointer;transition:border-color .2s}
+    .theme-btn:hover{border-color:var(--fg)}
 
     .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--fg);margin-bottom:24px}
     .stat{padding:20px;border-right:1px solid var(--fg);text-align:center}
@@ -151,6 +160,8 @@ export function renderStatsPage(
     .stat .label{font-family:'Inter',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--n500);margin-bottom:6px}
     .stat .val{font-family:'Playfair Display',serif;font-size:42px;font-weight:900;line-height:1}
     .stat .unit{font-family:'Inter',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--n500);margin-top:4px}
+    .stat .val .streak-fire{font-size:28px;vertical-align:middle;margin-right:4px}
+    .stat.streak-warm{background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(245,158,11,0.03))}
 
     .section{border:1px solid var(--fg);margin-bottom:24px}
     .section-head{padding:10px 20px;border-bottom:1px solid var(--fg);background:var(--n100);
@@ -170,12 +181,12 @@ export function renderStatsPage(
     .empty-state{text-align:center;padding:48px;font-style:italic;color:var(--n500)}
 
     .type-badge{font-family:'Inter',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;
-      padding:3px 8px;border-radius:3px;background:var(--n100);color:var(--n600)}
-    .type-long_reading{color:#1a5276}
-    .type-short_reading{color:#6c3483}
-    .type-vocabulary{color:#117a65}
-    .type-fill_gap{color:#b9770e}
-    .type-writing_micro{color:#922b21}
+      padding:3px 10px;border-radius:3px;border-left:3px solid}
+    .type-long_reading{color:var(--accent-navy);border-left-color:var(--accent-navy);background:rgba(26,58,92,0.06)}
+    .type-short_reading{color:var(--accent-green);border-left-color:var(--accent-green);background:rgba(46,125,50,0.06)}
+    .type-vocabulary{color:var(--accent-purple);border-left-color:var(--accent-purple);background:rgba(94,53,177,0.06)}
+    .type-fill_gap{color:var(--accent-amber);border-left-color:var(--accent-amber);background:rgba(245,158,11,0.06)}
+    .type-writing_micro{color:var(--accent-darkred);border-left-color:var(--accent-darkred);background:rgba(153,27,27,0.06)}
 
     .footer{text-align:center;padding:32px 0;font-family:'Playfair Display',serif;font-size:18px;color:var(--muted);letter-spacing:.6em}
     @media(max-width:600px){
@@ -201,14 +212,17 @@ export function renderStatsPage(
 
     <div class="meta-bar">
       <span>${esc(user.name)}</span>
-      <a href="/s/${esc(user.token)}">&larr; Volver al tablero</a>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="theme-btn" id="theme-toggle" title="Cambiar tema">&#x263E;</button>
+        <a href="/s/${esc(user.token)}">&larr; Volver al tablero</a>
+      </div>
     </div>
 
     <!-- STATS -->
     <div class="stats-grid">
-      <div class="stat">
+      <div class="stat${streakWarm ? " streak-warm" : ""}">
         <div class="label">Racha Actual</div>
-        <div class="val">${currentStreak}</div>
+        <div class="val"><span class="streak-fire">${streakEmoji}</span>${currentStreak}</div>
         <div class="unit">d&iacute;as</div>
       </div>
       <div class="stat">
@@ -228,10 +242,10 @@ export function renderStatsPage(
       </div>
     </div>
 
-    <!-- ACTIVITY GRAPH -->
+    <!-- ACTIVITY HEATMAP -->
     <div class="section">
       <div class="section-head">
-        <span>Actividad</span>
+        <span>Actividad &mdash; &Uacute;ltimas 16 Semanas</span>
         <div class="legend">
           Menos <span class="legend-cell" style="background:var(--cell-empty)"></span>
           <span class="legend-cell" style="background:var(--cell-1)"></span>
@@ -263,6 +277,22 @@ export function renderStatsPage(
 
     <div class="footer">&#x2727; &#x2727; &#x2727;</div>
   </div>
+
+  <script>
+    (function(){
+      var btn=document.getElementById('theme-toggle');
+      if(!btn)return;
+      function update(){var d=document.documentElement.getAttribute('data-theme');btn.textContent=d==='dark'?'\\u2600':'\\u263E';}
+      update();
+      btn.addEventListener('click',function(){
+        var cur=document.documentElement.getAttribute('data-theme');
+        var next=cur==='dark'?'light':'dark';
+        document.documentElement.setAttribute('data-theme',next);
+        localStorage.setItem('theme',next);
+        update();
+      });
+    })();
+  </script>
 </body>
 </html>`;
 }

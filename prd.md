@@ -207,7 +207,7 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
       "Responsive layout, dark mode support",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",
