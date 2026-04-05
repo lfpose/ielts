@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-05
-**Tasks Completed:** 4 of 13 (9 tasks remaining in prd.md)
-**Current Task:** P3-4 complete
+**Tasks Completed:** 5 of 13 (8 tasks remaining in prd.md)
+**Current Task:** P3-5 complete
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,21 @@
 ---
 
 ## Session Log
+
+### 2026-04-05 — P3-5: Exercise Template — Fill the Gap
+- Rewrote src/templates/exercise-fill-gap.ts with all improvements-v2.md section 5 styles applied
+- Header bar: back link left, 'Ejercicio 4 de 5 · ~3 min' center, time estimate right
+- Paragraph: Lora 400 17px line-height 1.9, wrapped in subtle paper card (n100 bg, rounded)
+- Blank states: default (2px underlined muted), selected (red underline + yellow bg tint), filled (word inline bold in accent-amber color)
+- Word bank: 'BANCO DE PALABRAS' uppercase label, chips as rounded pills (Inter 600 13px, 1.5px solid var(--fg), border-radius 999px)
+- Chip hover: dark bg white text; selected chip: dark bg with scale bounce; used chip: opacity 0.4, not-allowed, line-through
+- Two tap models: blank→chip OR chip→blank; tap filled blank to undo
+- Submit enables when all blanks filled; disabled state = muted bg + not-allowed cursor
+- Feedback: CSS slideIn animation 300ms with 50ms stagger per correction, score count-up animation (0 → final over 600ms with eased cubic)
+- Amber accent color (--accent-amber) matching exercise type from dashboard
+- Files changed: src/templates/exercise-fill-gap.ts
+- Build: passes with zero errors
+---
 
 ### 2026-04-05 — P3-4: Exercise Template — Vocabulary Match (full game)
 - Rewrote src/templates/exercise-vocabulary.ts as a full tap-to-pair matching game

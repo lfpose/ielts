@@ -115,7 +115,7 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
       "Header: 'Ejercicio 4 de 5 · ~3 min'",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",
