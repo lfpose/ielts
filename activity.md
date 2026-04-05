@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-05
-**Tasks Completed:** 7 of 13 (6 tasks remaining in prd.md)
-**Current Task:** IMPROVE-3 complete
+**Tasks Completed:** 8 of 13 (5 tasks remaining in prd.md)
+**Current Task:** IMPROVE-4 complete
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,15 @@
 ---
 
 ## Session Log
+
+### 2026-04-05 — IMPROVE-4: Landing page polish
+- Added ornamental horizontal rule (───── § ─────) between masthead and form section
+- Wrapped landing card in 1px subtle border frame (var(--muted))
+- Changed email input to bottom-border-only style (more editorial, less form-like)
+- Styled "CADA DÍA UN PASO MÁS CERCA" footer as small-caps with 4px letter-spacing
+- Files changed: src/templates/landing.ts
+- Build: passes with zero errors
+---
 
 ### 2026-04-05 — IMPROVE-3: Cross-cutting animations and completion celebration
 - Verified all 5 exercise templates already have feedback slide-in animations (slideIn @keyframes 300ms), staggered reveals (50ms per question), and score count-up animations (0 → final over 600ms cubic ease)

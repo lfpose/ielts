@@ -162,7 +162,7 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
       "Style 'CADA DÍA UN PASO MÁS CERCA' as small-caps with letter-spacing",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",
