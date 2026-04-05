@@ -58,7 +58,7 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
       "Feedback reveal: CSS slide-in animation 300ms, questions staggered 50ms, score counts up with JS animation",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",
