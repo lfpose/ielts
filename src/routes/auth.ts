@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
-import { getUserByToken, getUserByEmail } from "../db.js";
+import { getUserByToken, getUserByEmail, createUser } from "../db.js";
 import { renderLanding } from "../templates/landing.js";
 
 const app = new Hono();
@@ -26,10 +26,7 @@ app.post("/login", async (c) => {
     return c.html(renderLanding("Por favor ingresa tu correo electrónico."));
   }
 
-  const user = getUserByEmail(email);
-  if (!user) {
-    return c.html(renderLanding("No encontramos tu cuenta."));
-  }
+  const user = getUserByEmail(email) ?? createUser(email, email.split("@")[0]);
 
   const isProduction = process.env.NODE_ENV === "production" || process.env.FLY_APP_NAME;
   setCookie(c, "session_token", user.token, {
