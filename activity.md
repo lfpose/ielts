@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-05
-**Tasks Completed:** 12 of 13 (1 task remaining in prd.md)
-**Current Task:** P5-1 complete
+**Tasks Completed:** 13 of 13 (ALL COMPLETE)
+**Current Task:** All tasks done
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,16 @@
 ---
 
 ## Session Log
+
+### 2026-04-05 — P5-2: Admin Routes — Full Implementation
+- Verified all admin routes already fully implemented: GET /admin, POST generate/regenerate, exercise regenerate, email send, settings, user CRUD, topic CRUD, API JSON endpoints
+- Fixed regenerate topic reuse bug: saved existing topic BEFORE deleting the board (was calling getTodaysBoard() after deletion, always getting null)
+- Added sendWelcome support to POST /admin/users/add: when sendWelcome=true, sends invite email to new user
+- HTTP Basic Auth verified on all routes via wildcard middleware
+- 17 routes total: dashboard, generate, regenerate, exercise regenerate, email, settings, user add/remove/detail, topic reorder/add/remove/force, 4 API endpoints
+- Files changed: src/routes/admin.ts
+- Build: passes with zero errors
+---
 
 ### 2026-04-05 — P5-1: Admin Dashboard Template
 - Verified admin template already fully implements all 5 required sections from specs/admin.md

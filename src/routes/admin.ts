@@ -140,17 +140,20 @@ app.post("/regenerate", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const useNewTopic = body.newTopic === true;
 
+  // Save existing topic before deleting
+  const existing = getTodaysBoard();
+  const existingTopic = existing?.topic;
+
   // Delete existing board
   deleteBoardByDate(today);
 
-  // Pick topic
+  // Pick topic — reuse existing unless newTopic requested
   let topic: string;
-  const existing = getTodaysBoard();
-  if (useNewTopic || !existing) {
+  if (useNewTopic || !existingTopic) {
     const picked = pickTopic();
     topic = picked.topic;
   } else {
-    topic = existing.topic;
+    topic = existingTopic;
   }
 
   try {
@@ -320,6 +323,7 @@ app.post("/users/add", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const name = body.name as string;
   const email = body.email as string;
+  const sendWelcome = body.sendWelcome === true;
 
   if (!name || !email) {
     return c.json({ error: "Name and email are required" }, 400);
@@ -331,6 +335,19 @@ app.post("/users/add", async (c) => {
   }
 
   const user = createUser(email, name);
+
+  if (sendWelcome) {
+    const baseUrl = getSetting("base_url") || "https://ielts-daily.fly.dev";
+    const practiceUrl = `${baseUrl}/s/${user.token}`;
+    const board = getTodaysBoard();
+    const topic = board?.topic || "IELTS Practice";
+    try {
+      await sendInviteEmail(user.email, user.name, practiceUrl, topic);
+    } catch (_) {
+      // Welcome email failure shouldn't block user creation
+    }
+  }
+
   return c.json({ success: true, user: { id: user.id, name: user.name, email: user.email, token: user.token } });
 });
 

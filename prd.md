@@ -241,7 +241,7 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
       "Verify HTTP Basic Auth on all admin routes",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   }
 ]
 ```
