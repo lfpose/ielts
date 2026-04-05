@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-05
-**Tasks Completed:** 9 of 13 (4 tasks remaining in prd.md)
-**Current Task:** P3-7 complete
+**Tasks Completed:** 10 of 13 (3 tasks remaining in prd.md)
+**Current Task:** P4-1 complete
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,16 @@
 ---
 
 ## Session Log
+
+### 2026-04-05 — P4-1: Email Template Update
+- Verified email template and service already fully implement specs/email.md
+- buildInviteEmailHtml accepts (userName, practiceUrl, topic) — correct signature
+- Fixed subject: "Tu práctica de hoy está lista"
+- Body: Playfair/Georgia greeting, topic line, single red CTA button (#CC0000), max 480px, footer
+- sendInviteEmail already accepts topic (not article title) — callers in index.ts and admin.ts pass topic correctly
+- No code changes needed — already complete from prior implementation
+- Build: passes with zero errors
+---
 
 ### 2026-04-05 — P3-7: Student Routes — Full Wiring
 - Verified all student routes already fully implemented in src/routes/student.ts
