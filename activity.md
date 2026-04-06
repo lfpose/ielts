@@ -20,6 +20,25 @@
 
 ## Session Log
 
+### 2026-04-06 — V3-2: Dashboard — editorial newspaper masonry layout
+- Complete rewrite of src/templates/dashboard.ts to implement front-page newspaper layout from specs/improvements-v3.md
+- Masthead: edition line (Vol. 1 + Spanish date left, greeting + streak + stats link right), 52px Playfair masthead, tagline, classic double rule (3px + gap + 1px)
+- Topic banner: 'TEMA DEL DÍA' kicker with horizontal rule and 5 progress dots (filled/outline), big 42px centered topic headline, Lora italic subheadline from JSON illustration field
+- Main two-column layout: left 58% feature story with dithered Wikipedia image (CSS grayscale + contrast + radial-gradient dot overlay), right 42% secondary stories
+- Feature story (long_reading): kicker 'LECTURA PRINCIPAL' navy, article title 26px, lead excerpt, red CTA link or green score badge if completed
+- Right column top (short_reading): kicker 'ANÁLISIS BREVE' green, title, lead, CTA
+- Right column bottom (vocabulary): kicker 'VOCABULARIO' purple, word list preview, matching game subtitle, CTA
+- Bottom briefs 'EN BREVE' section: two equal columns — fill_gap ('COMPLETA LOS ESPACIOS' amber) and writing_micro ('MICRO ESCRITURA' dark-red)
+- Removed: streak widget box, progress bar, heatmap from dashboard, ESTADÍSTICAS button, all 'Disponible' labels
+- Added: stats link in edition line, compact horizontal archive list with small-caps dates
+- Parsed illustration JSON field for imageUrl + subheadline, CSS gradient fallback when no image
+- Dark mode: image blend-mode switches to screen, all accent colors have dark variants
+- Mobile (<700px): single column stack, feature image stays, briefs still 2-col
+- Toast and confetti preserved for completion celebration
+- Files changed: src/templates/dashboard.ts
+- Build: passes with zero errors
+---
+
 ### 2026-04-06 — V3-1: Content pipeline — Wikipedia image + subheadline
 - Removed `generateIllustration()` ASCII art Claude API call entirely
 - Added `fetchTopicImage(topic)`: calls Wikipedia REST API `/page/summary/{topic}`, returns thumbnail URL; falls back to Opensearch first 3 results; returns empty string if nothing found

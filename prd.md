@@ -68,7 +68,7 @@ All v2 tasks complete. Two new tasks prepended for the v3 editorial redesign.
       "Mobile: single column stack, all sections full width, image stays in feature card, briefs still 2-col",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "improvement",
