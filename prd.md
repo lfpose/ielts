@@ -42,7 +42,7 @@ All v2 tasks complete. Two new tasks prepended for the v3 editorial redesign.
       "Update createBoard() call — illustration is now this JSON string",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "improvement",

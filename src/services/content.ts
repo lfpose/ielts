@@ -109,17 +109,20 @@ export async function generateBoard(
   // Generate long reading first (vocabulary depends on it)
   const longReading = await generateLongReading(topic, difficulty);
 
-  // Generate short reading, vocabulary, writing, and illustration in parallel
-  const [shortReading, vocabulary, writingMicro, illustration] = await Promise.all([
+  // Generate short reading, vocabulary, writing, image, and subheadline in parallel
+  const [shortReading, vocabulary, writingMicro, imageUrl, subheadline] = await Promise.all([
     generateShortReading(topic, difficulty),
     generateVocabulary(longReading),
     generateWritingMicro(topic),
-    generateIllustration(topic),
+    fetchTopicImage(topic),
+    generateSubheadline(topic),
   ]);
 
   // Fill gap needs word bank context
   const userWords = userId ? getWordBankWords(userId) : [];
   const fillGap = await generateFillGap(topic, difficulty, userWords);
+
+  const illustration = JSON.stringify({ imageUrl, subheadline });
 
   return {
     topic,
@@ -418,29 +421,54 @@ Important: Return ONLY the JSON object, no other text.`,
   return extractJSON<WritingMicroContent>(text);
 }
 
-export async function generateIllustration(topic: string): Promise<string> {
+export async function fetchTopicImage(topic: string): Promise<string> {
+  // Try Wikipedia summary thumbnail first
+  try {
+    const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic)}`;
+    const res = await fetch(summaryUrl);
+    if (res.ok) {
+      const data = await res.json() as { thumbnail?: { source?: string } };
+      if (data.thumbnail?.source) return data.thumbnail.source;
+    }
+  } catch {
+    // Continue to fallback
+  }
+
+  // Fallback: Opensearch → first result → summary thumbnail
+  try {
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(topic)}&limit=3&format=json`;
+    const searchRes = await fetch(searchUrl);
+    if (searchRes.ok) {
+      const searchData = await searchRes.json() as [string, string[]];
+      const titles = searchData[1];
+      for (const title of titles) {
+        const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+        const res = await fetch(summaryUrl);
+        if (res.ok) {
+          const data = await res.json() as { thumbnail?: { source?: string } };
+          if (data.thumbnail?.source) return data.thumbnail.source;
+        }
+      }
+    }
+  } catch {
+    // Return empty string
+  }
+
+  return "";
+}
+
+export async function generateSubheadline(topic: string): Promise<string> {
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 1000,
+    max_tokens: 100,
     messages: [
       {
         role: "user",
-        content: `Create a simple ASCII art illustration for the topic: "${topic}".
-
-Requirements:
-- Width: 30-40 characters per line
-- Height: 15-20 lines
-- Use simple block characters, dots, slashes, and basic ASCII to create a recognizable silhouette or outline
-- Keep it simple — think: outline of an animal, a landscape, a building, a simple object
-- No text labels inside the art
-- The illustration should be immediately recognizable as related to the topic
-
-Return ONLY the ASCII art, nothing else. No code blocks, no explanation, just the raw ASCII lines.`,
+        content: `Write ONE short journalistic subheadline sentence about "${topic}" for a newspaper front page. Style: vivid, editorial, present tense. Example: "How volcanic eruptions reshape the natural world's most dramatic landscapes." Return ONLY the sentence, nothing else.`,
       },
     ],
   });
 
   const text = response.content[0].type === "text" ? response.content[0].text : "";
-  // Clean up: remove any code block markers if present
-  return text.replace(/^```[a-z]*\n?/gm, "").replace(/\n?```$/gm, "").trim();
+  return text.replace(/^["']|["']$/g, "").trim();
 }

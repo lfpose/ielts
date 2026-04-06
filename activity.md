@@ -20,6 +20,16 @@
 
 ## Session Log
 
+### 2026-04-06 — V3-1: Content pipeline — Wikipedia image + subheadline
+- Removed `generateIllustration()` ASCII art Claude API call entirely
+- Added `fetchTopicImage(topic)`: calls Wikipedia REST API `/page/summary/{topic}`, returns thumbnail URL; falls back to Opensearch first 3 results; returns empty string if nothing found
+- Added `generateSubheadline(topic)`: short Claude API call for 1 journalistic sentence
+- Updated `generateBoard()`: calls `fetchTopicImage` and `generateSubheadline` in parallel via Promise.all
+- Illustration field now stores JSON string: `{ imageUrl, subheadline }`
+- Files changed: src/services/content.ts
+- Build: passes with zero errors
+---
+
 ### 2026-04-05 — P5-2: Admin Routes — Full Implementation
 - Verified all admin routes already fully implemented: GET /admin, POST generate/regenerate, exercise regenerate, email send, settings, user CRUD, topic CRUD, API JSON endpoints
 - Fixed regenerate topic reuse bug: saved existing topic BEFORE deleting the board (was calling getTodaysBoard() after deletion, always getting null)
