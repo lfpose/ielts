@@ -11,10 +11,11 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
 - **Hosting**: Fly.io
 
 ## Current State
-9 of 18 original tasks complete. Foundation, services, and first two templates (dashboard, long reading) are done. This PRD covers all remaining work including design improvements from `specs/improvements-v2.md`.
+All v2 tasks complete. Two new tasks prepended for the v3 editorial redesign.
 
 ## Spec files to read
-- `specs/improvements-v2.md` — **primary reference for all design decisions**
+- `specs/improvements-v3.md` — **primary reference for v3 dashboard redesign**
+- `specs/improvements-v2.md` — reference for exercise-level design decisions
 - `specs/design.md` — color palette, typography, tokens
 - `specs/exercise-*.md` — per-exercise content and UX rules
 - `specs/daily-flow.md` — overall navigation and state model
@@ -26,6 +27,49 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
 
 ```json
 [
+  {
+    "category": "improvement",
+    "description": "V3-1: Content pipeline — replace ASCII art with Wikipedia topic image. In src/services/content.ts, remove the Claude API call that generates ASCII illustrations. Replace with a fetchTopicImage(topic) function that calls the Wikipedia REST API (https://en.wikipedia.org/api/rest_v1/page/summary/{topic}) and returns the thumbnail.source URL. If not found, try Opensearch first result. If nothing, return empty string. Also generate a short editorial subheadline (1 journalistic sentence about the topic). Store both (imageUrl, subheadline) in the board's illustration field as JSON: {imageUrl, subheadline}.",
+    "steps": [
+      "Read specs/improvements-v3.md sections 2 and 3",
+      "Read src/services/content.ts — find the ASCII illustration generation (the Claude API call for ASCII art near line 428)",
+      "Remove the ASCII generation Claude API call entirely",
+      "Write fetchTopicImage(topic: string): Promise<string> — calls Wikipedia REST API https://en.wikipedia.org/api/rest_v1/page/summary/{encodeURIComponent(topic)}, returns response.thumbnail?.source or empty string",
+      "If Wikipedia summary has no thumbnail, try Wikipedia Opensearch: https://en.wikipedia.org/w/api.php?action=opensearch&search={topic}&limit=3&format=json — take first result title, then fetch its summary for the thumbnail",
+      "Write generateSubheadline(topic: string): Promise<string> — short Claude API call, one sentence, journalistic style, e.g. 'How volcanic eruptions reshape the natural world's most dramatic landscapes.'",
+      "In generateBoard(): call fetchTopicImage and generateSubheadline in parallel (Promise.all)",
+      "Store as JSON string in illustration field: JSON.stringify({ imageUrl, subheadline })",
+      "Update createBoard() call — illustration is now this JSON string",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "improvement",
+    "description": "V3-2: Dashboard — editorial newspaper masonry layout. Completely rewrite src/templates/dashboard.ts to implement the front-page newspaper layout from specs/improvements-v3.md. Feature story (long reading) takes left ~58% with dithered image. Right column has short reading + vocabulary. Bottom briefs row has fill gap + writing. Streak moves to masthead edition line. Progress becomes 5 small dots in topic banner. No 'Disponible' labels anywhere.",
+    "steps": [
+      "Read specs/improvements-v3.md sections 1 and 4-6 fully before touching any code",
+      "Read specs/design.md for color tokens and typography",
+      "Read current src/templates/dashboard.ts to understand existing data structures (BoardWithStatus, ExerciseWithStatus, etc.)",
+      "Parse illustration field: const illus = board.illustration ? JSON.parse(board.illustration) : {}; → illus.imageUrl, illus.subheadline",
+      "Masthead: edition line (vol + date left, greeting + streak right), big Playfair masthead, tagline, then double rule (3px + gap + 1px)",
+      "Topic banner: 'TEMA DEL DÍA' kicker + horizontal rule + 5 progress dots right-aligned, then big topic headline (Playfair 900, 42px centered), subheadline below (Lora italic 15px centered muted)",
+      "Main two-column layout: left 58% feature story, right 42% secondary stories, column rule between them",
+      "Feature story (exercise slot 1 — long_reading): dithered image with CSS halftone overlay, kicker 'LECTURA PRINCIPAL', article title, 2-line lead, red CTA link — or score badge if completed",
+      "CSS dithering on image: filter grayscale(1) contrast(1.6) brightness(0.9) + ::after dot overlay radial-gradient 3px pattern at 25% opacity",
+      "Right column top (exercise slot 2 — short_reading): kicker 'ANÁLISIS BREVE', title, 2-line lead, CTA, thin rule below",
+      "Right column bottom (exercise slot 3 — vocabulary): kicker 'VOCABULARIO', word list preview (first 4 words comma-separated), 'Juego de emparejamiento', CTA",
+      "Bottom briefs section: 'EN BREVE' section header with rule, then two equal columns for exercises 4 and 5",
+      "Brief (exercise slot 4 — fill_gap): kicker 'COMPLETA LOS ESPACIOS', 1-line description, CTA",
+      "Brief (exercise slot 5 — writing_micro): kicker 'MICRO ESCRITURA', 1-line description, CTA",
+      "Archive: compact horizontal flex list of past boards below briefs",
+      "Remove: streak widget box, progress bar, all 'Disponible' text, ESTADÍSTICAS button (add stats link tiny in edition line instead)",
+      "Heatmap: move to its own section after archive, or remove from dashboard entirely (it lives in stats page)",
+      "Mobile: single column stack, all sections full width, image stays in feature card, briefs still 2-col",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
   {
     "category": "improvement",
     "description": "IMPROVE-1: Dashboard redesign. Refactor src/templates/dashboard.ts to implement the newspaper layout from specs/improvements-v2.md section 1. Two-column desktop grid (topic+illustration left, streak+heatmap right), separated by a column rule. Better exercise cards with type-specific left accent colors. Thicker progress bar (8px, pill segments). Streak widget with fire emoji and warm tint when streak > 7. Move heatmap to a standalone full-width section below cards with month labels and day labels.",
