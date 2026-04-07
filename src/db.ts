@@ -200,7 +200,7 @@ export interface Board {
   created_at: string;
 }
 
-export type ExerciseType = "long_reading" | "short_reading" | "vocabulary" | "fill_gap" | "writing_micro";
+export type ExerciseType = "long_reading" | "short_reading" | "vocabulary" | "fill_gap" | "writing_micro" | "mini_writing" | "word_search";
 
 export interface Exercise {
   id: number;
@@ -538,7 +538,7 @@ export function getRecentTopicHistory(days = 20): TopicHistoryEntry[] {
 }
 
 // =============================================
-// Stats (updated for new exercises+submissions model, 21-point max)
+// Stats (updated for new exercises+submissions model, 26-point max)
 // =============================================
 
 export function getActivityData(userId: number, days = 112): ActivityDay[] {

@@ -65,7 +65,7 @@ function renderArchive(archives: BoardWithStatus[], token: string): string {
   if (archives.length === 0) return "";
   const items = archives.map(bws => {
     const link = `/s/${esc(token)}/exercise/${bws.exercises[0]?.id || ""}`;
-    return `<a href="${link}" class="arch-item">${fmtDateShort(bws.board.date)} &middot; ${esc(bws.board.topic)} &middot; ${bws.completedCount}/5</a>`;
+    return `<a href="${link}" class="arch-item">${fmtDateShort(bws.board.date)} &middot; ${esc(bws.board.topic)} &middot; ${bws.completedCount}/${bws.exercises.length}</a>`;
   }).join("");
   return `<div class="archive-section">
     <div class="section-rule"><span class="section-label">EDICIONES ANTERIORES</span><hr></div>
@@ -349,8 +349,8 @@ export function renderDashboard(
     <div class="footer">The IELTS Daily &middot; Read &middot; Write &middot; Improve &middot; Repeat</div>
 
   </div>
-  ${todaysBoard && todaysBoard.completedCount > 0 ? `<div class="toast" id="toast">${todaysBoard.completedCount} de 5 completados${todaysBoard.completedCount === 5 ? " \\u2014 \\u00a1Felicidades! \\ud83c\\udf89" : ""}</div>` : ""}
-  ${todaysBoard && todaysBoard.completedCount === 5 ? `<div class="confetti-container" id="confetti"></div>` : ""}
+  ${todaysBoard && todaysBoard.completedCount > 0 ? `<div class="toast" id="toast">${todaysBoard.completedCount} de ${todaysBoard.exercises.length} completados${todaysBoard.completedCount === todaysBoard.exercises.length ? " \\u2014 \\u00a1Felicidades! \\ud83c\\udf89" : ""}</div>` : ""}
+  ${todaysBoard && todaysBoard.completedCount === todaysBoard.exercises.length ? `<div class="confetti-container" id="confetti"></div>` : ""}
   <script>
     function isDark(){var t=localStorage.getItem('theme')||'auto';return t==='dark'?true:t==='light'?false:window.matchMedia('(prefers-color-scheme:dark)').matches}
     function updateIcon(){var b=document.getElementById('themeBtn');if(b)b.textContent=isDark()?'\\u2600':'\\u263E'}

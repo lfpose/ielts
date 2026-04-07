@@ -98,7 +98,7 @@ V3 done with 3 rendering bugs + user feedback: shorter passages, easier vocabula
       "Update getTodaysBoardWithStatus if it assumes 5 exercises — should work with 7",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",

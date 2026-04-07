@@ -26,7 +26,7 @@ export function buildInviteEmailHtml(
 
         <tr><td style="padding:0 0 8px;">
           <div style="font-size:16px;color:#111;line-height:1.7;">
-            Tus 5 ejercicios de hoy est&aacute;n listos.
+            Tus 7 ejercicios de hoy est&aacute;n listos.
           </div>
         </td></tr>
 

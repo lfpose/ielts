@@ -79,7 +79,7 @@ app.get("/", (c) => {
     metrics: {
       activeUsersToday: getActiveUsersToday(),
       avgCompletion: completion.total > 0 ? `${completion.avg.toFixed(1)} / ${completion.total}` : "0 / 0",
-      avgScore: avgScore > 0 ? `${avgScore.toFixed(1)} / 21` : "0 / 21",
+      avgScore: avgScore > 0 ? `${avgScore.toFixed(1)} / 26` : "0 / 26",
       activeStreaks: getActiveStreaksCount(),
     },
     users: getAdminUserRows(),

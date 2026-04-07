@@ -10,6 +10,8 @@ const EXERCISE_LABELS: Record<ExerciseType, string> = {
   vocabulary: "Vocabulario",
   fill_gap: "Completar",
   writing_micro: "Escritura",
+  mini_writing: "Mini Escritura",
+  word_search: "Sopa de Letras",
 };
 
 const EXERCISE_ACCENT: Record<ExerciseType, string> = {
@@ -18,6 +20,8 @@ const EXERCISE_ACCENT: Record<ExerciseType, string> = {
   vocabulary: "#5e35b1",
   fill_gap: "#f59e0b",
   writing_micro: "#991b1b",
+  mini_writing: "#7b2d2d",
+  word_search: "#1a4a3a",
 };
 
 function buildHeatmap(activityData: ActivityDay[]): string {
@@ -80,7 +84,7 @@ function buildHeatmap(activityData: ActivityDay[]): string {
       let fill = "var(--cell-empty)";
       if (a?.submitted) {
         const sn = a.score ?? 0;
-        fill = sn >= 16 ? "var(--cell-4)" : sn >= 11 ? "var(--cell-3)" : sn >= 6 ? "var(--cell-2)" : "var(--cell-1)";
+        fill = sn >= 20 ? "var(--cell-4)" : sn >= 14 ? "var(--cell-3)" : sn >= 8 ? "var(--cell-2)" : "var(--cell-1)";
       }
       const isToday = ds === todayStr;
       const dayName = d.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });

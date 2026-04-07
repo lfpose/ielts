@@ -64,7 +64,7 @@ export async function runDailyJob() {
       max_score: ex.max_score,
     });
   }
-  console.log(`Board created (id: ${board.id}) with 5 exercises.`);
+  console.log(`Board created (id: ${board.id}) with 7 exercises.`);
 
   // 5. Log topic usage
   markTopicUsed(topic, today);

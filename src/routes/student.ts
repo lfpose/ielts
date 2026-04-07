@@ -53,6 +53,8 @@ const EXERCISE_RENDERERS: Record<ExerciseType, (user: User, exercise: any, submi
   vocabulary: renderVocabulary,
   fill_gap: renderFillGap,
   writing_micro: renderWritingMicro,
+  mini_writing: (_u, ex) => `<html><body><p>mini_writing exercise ${ex.id} — coming soon</p></body></html>`,
+  word_search: (_u, ex) => `<html><body><p>word_search exercise ${ex.id} — coming soon</p></body></html>`,
 };
 
 // Student dashboard

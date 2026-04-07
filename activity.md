@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-07
-**Tasks Completed:** 4 of 10 (FIX-1, FIX-2, FIX-3, FIX-4 done)
-**Current Task:** NEW-1 — DB + types for 2 new exercise types
+**Tasks Completed:** 5 of 10 (FIX-1, FIX-2, FIX-3, FIX-4, NEW-1 done)
+**Current Task:** NEW-2 — Content generation for mini_writing and word_search
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,20 @@
 ---
 
 ## Session Log
+
+### 2026-04-07 — NEW-1: DB + types for 2 new exercise types
+- Added 'mini_writing' | 'word_search' to ExerciseType union in src/db.ts
+- Updated admin.ts: avgScore display "/ 21" → "/ 26"
+- Updated stats.ts: heatmap thresholds 16/11/6 → 20/14/8 (scaled to 26-point max)
+- Updated stats.ts: added mini_writing/word_search to EXERCISE_LABELS and EXERCISE_ACCENT maps
+- Updated admin.ts: added mini_writing/word_search to EXERCISE_TYPE_LABELS
+- Updated dashboard.ts: archive list completedCount/5 → completedCount/exercises.length (dynamic)
+- Updated dashboard.ts: toast and confetti now use exercises.length instead of hardcoded 5
+- Updated email.ts: "5 ejercicios" → "7 ejercicios"
+- Updated index.ts: console.log "5 exercises" → "7 exercises"
+- Added stub renderers for mini_writing/word_search in student.ts (replaced in NEW-4/NEW-5)
+- Build: passes with zero errors
+---
 
 ### 2026-04-07 — FIX-4: Content pipeline prompt fixes
 - Updated generateLongReading: 500-700 → 250-350 words, added "short paragraphs of 3-4 sentences with clear breaks"
