@@ -73,7 +73,7 @@ V3 done with 3 rendering bugs + user feedback: shorter passages, easier vocabula
       "Start local server, open vocabulary exercise with agent-browser, verify cards render (NOT a table), verify JS interaction works by checking snapshot shows clickable elements",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "bugfix",

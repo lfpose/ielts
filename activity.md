@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-07
-**Tasks Completed:** 2 of 10 (FIX-1, FIX-2 done)
-**Current Task:** FIX-3 — vocabulary exercise renders as table instead of matching game
+**Tasks Completed:** 3 of 10 (FIX-1, FIX-2, FIX-3 done)
+**Current Task:** FIX-4 — content pipeline fixes (shorter reading, easier vocab, line breaks)
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,14 @@
 ---
 
 ## Session Log
+
+### 2026-04-07 — FIX-3: Vocabulary exercise rendering
+- Verified template already renders correctly as tap-to-pair matching game (not a table)
+- Two-column card layout: 6 word cards (left) + 6 shuffled definition cards (right)
+- Vanilla JS tap-to-pair with 6 pair colors, undo, submit when all 6 paired
+- Browser screenshot confirmed correct rendering — no [object Object], no table
+- Build: passes with zero errors
+---
 
 ### 2026-04-07 — FIX-2: Dashboard — vocabulary word preview [object Object]
 - Root cause: `getExcerpt()` cast `parsed.words` as `string[]` but words are `{ word, definition, context }` objects. Fix: cast as `{ word: string }[]` and map to extract `.word` string.
