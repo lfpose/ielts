@@ -104,7 +104,9 @@ export function renderDashboard(
   const longReading = todaysBoard ? findByType(todaysBoard.exercises, "long_reading") : undefined;
   const shortReading = todaysBoard ? findByType(todaysBoard.exercises, "short_reading") : undefined;
   const vocabulary = todaysBoard ? findByType(todaysBoard.exercises, "vocabulary") : undefined;
+  const wordSearch = todaysBoard ? findByType(todaysBoard.exercises, "word_search") : undefined;
   const fillGap = todaysBoard ? findByType(todaysBoard.exercises, "fill_gap") : undefined;
+  const miniWriting = todaysBoard ? findByType(todaysBoard.exercises, "mini_writing") : undefined;
   const writing = todaysBoard ? findByType(todaysBoard.exercises, "writing_micro") : undefined;
 
   // Extract content for cards
@@ -129,13 +131,13 @@ export function renderDashboard(
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=block');
     :root{--bg:#F9F9F7;--fg:#111;--muted:#E5E5E0;--red:#CC0000;--n100:#F5F5F5;--n500:#737373;--n600:#525252;
       --correct:#2D6A4F;
-      --accent-navy:#1a1a2e;--accent-green:#2d4a22;--accent-purple:#4a1942;--accent-amber:#3d2200;--accent-darkred:#1a0000}
+      --accent-navy:#1a1a2e;--accent-green:#2d4a22;--accent-purple:#4a1942;--accent-amber:#3d2200;--accent-darkred:#1a0000;--accent-teal:#1a3a3a}
     [data-theme="dark"]{--bg:#111;--fg:#E8E8E4;--muted:#2A2A28;--red:#FF4444;--n100:#1A1A1A;--n500:#888;--n600:#AAA;
       --correct:#40C463;
-      --accent-navy:#8888cc;--accent-green:#6aaa5a;--accent-purple:#bb88cc;--accent-amber:#dda030;--accent-darkred:#cc6666}
+      --accent-navy:#8888cc;--accent-green:#6aaa5a;--accent-purple:#bb88cc;--accent-amber:#dda030;--accent-darkred:#cc6666;--accent-teal:#55aaaa}
     @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111;--fg:#E8E8E4;--muted:#2A2A28;--red:#FF4444;--n100:#1A1A1A;--n500:#888;--n600:#AAA;
       --correct:#40C463;
-      --accent-navy:#8888cc;--accent-green:#6aaa5a;--accent-purple:#bb88cc;--accent-amber:#dda030;--accent-darkred:#cc6666}}
+      --accent-navy:#8888cc;--accent-green:#6aaa5a;--accent-purple:#bb88cc;--accent-amber:#dda030;--accent-darkred:#cc6666;--accent-teal:#55aaaa}}
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Lora',Georgia,serif;background:var(--bg);color:var(--fg);min-height:100vh;
       background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23111' fill-opacity='.04' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'/%3E%3C/svg%3E");
@@ -185,6 +187,7 @@ export function renderDashboard(
     .kicker-purple{color:var(--accent-purple)}
     .kicker-amber{color:var(--accent-amber)}
     .kicker-darkred{color:var(--accent-darkred)}
+    .kicker-teal{color:var(--accent-teal)}
 
     /* Story blocks */
     .story-title{font-family:'Playfair Display',serif;font-weight:700;line-height:1.2;margin-bottom:6px}
@@ -205,7 +208,7 @@ export function renderDashboard(
     .section-rule{display:flex;align-items:center;gap:12px;padding:12px 0}
     .section-label{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:var(--red);white-space:nowrap;font-variant:small-caps}
     .section-rule hr{flex:1;border:none;border-top:1px solid var(--muted)}
-    .briefs-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+    .briefs-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px}
     .brief-item{padding:0}
     .brief-desc{font-family:'Lora',serif;font-size:13px;color:var(--n500);line-height:1.5;margin-bottom:8px}
 
@@ -254,6 +257,7 @@ export function renderDashboard(
       .col-feature{border-right:none;padding:16px 0;border-bottom:1px solid var(--muted)}
       .col-secondary{padding:16px 0}
       .story-title.lg{font-size:22px}
+      .briefs-grid{grid-template-columns:1fr}
       .arch-list{overflow-x:auto;flex-wrap:nowrap}
     }
   </style>
@@ -316,6 +320,12 @@ export function renderDashboard(
         <div class="vocab-sub">Juego de emparejamiento &middot; ${vocabData.words.length} palabras</div>
         ${ctaOrScore(vocabulary, user.token, "Jugar")}
         ` : ""}
+        ${wordSearch ? `
+        <hr class="thin-rule">
+        <div class="kicker kicker-teal">SOPA DE LETRAS</div>
+        <div class="vocab-sub">4 palabras escondidas</div>
+        ${ctaOrScore(wordSearch, user.token, "Buscar")}
+        ` : ""}
       </div>
     </div>
 
@@ -327,6 +337,11 @@ export function renderDashboard(
           <div class="kicker kicker-amber">COMPLETA LOS ESPACIOS</div>
           <div class="brief-desc">Elige las palabras correctas para el p&aacute;rrafo</div>
           ${ctaOrScore(fillGap, user.token, "Comenzar")}
+        </div>` : `<div></div>`}
+        ${miniWriting ? `<div class="brief-item">
+          <div class="kicker kicker-darkred">UNA FRASE</div>
+          <div class="brief-desc">Escribe una oraci&oacute;n sobre el tema</div>
+          ${ctaOrScore(miniWriting, user.token, "Escribir")}
         </div>` : `<div></div>`}
         ${writing ? `<div class="brief-item">
           <div class="kicker kicker-darkred">MICRO ESCRITURA</div>

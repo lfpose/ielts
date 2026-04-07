@@ -184,7 +184,7 @@ V3 done with 3 rendering bugs + user feedback: shorter passages, easier vocabula
       "MUST verify with agent-browser — dashboard shows 7 exercises, all links work",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "improvement",

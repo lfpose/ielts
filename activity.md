@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-07
-**Tasks Completed:** 9 of 10 (FIX-1, FIX-2, FIX-3, FIX-4, NEW-1, NEW-2, NEW-3, NEW-4, NEW-5 done)
-**Current Task:** NEW-6 — Dashboard + routes update for 7 exercises
+**Tasks Completed:** 10 of 10 (FIX-1, FIX-2, FIX-3, FIX-4, NEW-1, NEW-2, NEW-3, NEW-4, NEW-5, NEW-6 done)
+**Current Task:** All tasks complete
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,20 @@
 ---
 
 ## Session Log
+
+### 2026-04-07 — NEW-6: Dashboard + routes update for 7 exercises
+- Added `--accent-teal:#1a3a3a` CSS variable (and dark mode variant `#55aaaa`) for word_search
+- Added `.kicker-teal` CSS class
+- Added `wordSearch` and `miniWriting` variables via `findByType()`
+- Updated right column: word_search appears below vocabulary (kicker 'SOPA DE LETRAS', '4 palabras escondidas', CTA 'Buscar →')
+- Updated briefs grid from 2-column to 3-column: fill_gap → mini_writing → writing_micro
+- mini_writing brief: kicker 'UNA FRASE', 'Escribe una oración sobre el tema', CTA 'Escribir →'
+- Updated `.briefs-grid` to `grid-template-columns:1fr 1fr 1fr`; mobile override `grid-template-columns:1fr`
+- Routes in student.ts were already complete (mini_writing and word_search cases already wired in NEW-4/NEW-5)
+- Files changed: src/templates/dashboard.ts, prd.md, activity.md
+- Build: passes with zero errors
+- Browser: dashboard renders correctly, no [object Object], archive shows correct exercise count
+---
 
 ### 2026-04-07 — NEW-5: Word Search template
 - Created src/templates/exercise-word-search.ts with `renderWordSearch()` function
