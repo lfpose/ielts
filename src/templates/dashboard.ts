@@ -37,7 +37,8 @@ function getExcerpt(content: string, type: ExerciseType): { title: string; excer
       return { title: "", excerpt: prompt.length > 100 ? prompt.slice(0, 100) + "\u2026" : prompt, words: [] };
     }
     if (type === "vocabulary") {
-      const words = (parsed.words || []) as string[];
+      const wordObjs = (parsed.words || []) as { word: string }[];
+      const words = wordObjs.map(w => w.word);
       return { title: "", excerpt: "", words };
     }
     if (type === "fill_gap") {

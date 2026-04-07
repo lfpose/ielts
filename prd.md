@@ -52,7 +52,7 @@ V3 done with 3 rendering bugs + user feedback: shorter passages, easier vocabula
       "Start local server, open dashboard with agent-browser, verify word preview shows actual words like 'emissions · renewable · infrastructure · transition ...'",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "bugfix",

@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-07
-**Tasks Completed:** 1 of 10 (FIX-1 done)
-**Current Task:** FIX-2 — vocabulary word preview [object Object]
+**Tasks Completed:** 2 of 10 (FIX-1, FIX-2 done)
+**Current Task:** FIX-3 — vocabulary exercise renders as table instead of matching game
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,13 @@
 ---
 
 ## Session Log
+
+### 2026-04-07 — FIX-2: Dashboard — vocabulary word preview [object Object]
+- Root cause: `getExcerpt()` cast `parsed.words` as `string[]` but words are `{ word, definition, context }` objects. Fix: cast as `{ word: string }[]` and map to extract `.word` string.
+- Files changed: src/templates/dashboard.ts (line 40)
+- Build: passes with zero errors
+- Browser: verified vocabulary section shows "emissions · renewable · infrastructure · transition ..." instead of "[object Object]"
+---
 
 ### 2026-04-07 — FIX-1: Dashboard — topic image not loading
 - Root cause: `.feature-image { background: var(--fg) }` (`#111` near-black) + `mix-blend-mode: multiply` on the img caused all pixels to render near-black (invisible). Fix: changed to `background: var(--bg)` (cream/white) so multiply blend creates proper newspaper halftone effect.
