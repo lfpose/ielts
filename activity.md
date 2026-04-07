@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-07
-**Tasks Completed:** 8 of 10 (FIX-1, FIX-2, FIX-3, FIX-4, NEW-1, NEW-2, NEW-3, NEW-4 done)
-**Current Task:** NEW-5 — Word Search template
+**Tasks Completed:** 9 of 10 (FIX-1, FIX-2, FIX-3, FIX-4, NEW-1, NEW-2, NEW-3, NEW-4, NEW-5 done)
+**Current Task:** NEW-6 — Dashboard + routes update for 7 exercises
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,21 @@
 ---
 
 ## Session Log
+
+### 2026-04-07 — NEW-5: Word Search template
+- Created src/templates/exercise-word-search.ts with `renderWordSearch()` function
+- Layout: header "Ejercicio 4 de 7 · ~3 min", kicker "SOPA DE LETRAS" in teal
+- 10x10 grid: each cell 36px (28px mobile), Inter 600 uppercase, 1px borders, clickable
+- Counter "X de 4 encontradas" above grid
+- Vanilla JS interaction: first tap = start selection (yellow highlight); second tap same row/col = evaluate word; mismatch = red flash 350ms; match = pair color (4 colors from vocab palette), word card appears below
+- Different row+col on second tap: restart selection from new cell
+- Found word cards: Playfair word, Inter definition, Lora italic example, left-border pair color
+- All 4 found → auto-submits via fetch, page reloads to feedback mode
+- Feedback mode: score count-up, colored grid cells pre-computed server-side, all word cards, "Palabras guardadas en tu banco"
+- Updated src/routes/student.ts: replaced stub with renderWordSearch, added gradeWordSearch POST case, added word bank saving for word_search
+- Browser: verified grid renders, all 100 cells clickable, counter and kicker visible
+- Build: passes with zero errors
+---
 
 ### 2026-04-07 — NEW-4: Mini Writing template
 - Created src/templates/exercise-mini-writing.ts with `renderMiniWriting()` function
