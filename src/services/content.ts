@@ -66,6 +66,23 @@ export interface WritingMicroContent {
   prompt: string;
 }
 
+export interface MiniWritingContent {
+  prompt: string;
+  type: "complete" | "use_word" | "reply" | "describe";
+}
+
+export interface WordSearchContent {
+  grid: string[][];
+  words: Array<{
+    word: string;
+    definition: string;
+    example: string;
+    startRow: number;
+    startCol: number;
+    direction: "horizontal" | "vertical";
+  }>;
+}
+
 export interface GeneratedBoard {
   topic: string;
   illustration: string;
@@ -73,7 +90,9 @@ export interface GeneratedBoard {
     { type: "long_reading"; content: LongReadingContent; max_score: 5 },
     { type: "short_reading"; content: ShortReadingContent; max_score: 2 },
     { type: "vocabulary"; content: VocabularyContent; max_score: 6 },
+    { type: "word_search"; content: WordSearchContent; max_score: 4 },
     { type: "fill_gap"; content: FillGapContent; max_score: 5 },
+    { type: "mini_writing"; content: MiniWritingContent; max_score: 1 },
     { type: "writing_micro"; content: WritingMicroContent; max_score: 3 },
   ];
 }
@@ -109,11 +128,13 @@ export async function generateBoard(
   // Generate long reading first (vocabulary depends on it)
   const longReading = await generateLongReading(topic, difficulty);
 
-  // Generate short reading, vocabulary, writing, image, and subheadline in parallel
-  const [shortReading, vocabulary, writingMicro, imageUrl, subheadline] = await Promise.all([
+  // Generate in parallel: short reading, vocabulary, writing exercises, word search, image, subheadline
+  const [shortReading, vocabulary, writingMicro, miniWriting, wordSearch, imageUrl, subheadline] = await Promise.all([
     generateShortReading(topic, difficulty),
     generateVocabulary(longReading),
     generateWritingMicro(topic),
+    generateMiniWriting(topic, difficulty),
+    generateWordSearch(topic, difficulty),
     fetchTopicImage(topic),
     generateSubheadline(topic),
   ]);
@@ -131,7 +152,9 @@ export async function generateBoard(
       { type: "long_reading", content: longReading, max_score: 5 },
       { type: "short_reading", content: shortReading, max_score: 2 },
       { type: "vocabulary", content: vocabulary, max_score: 6 },
+      { type: "word_search", content: wordSearch, max_score: 4 },
       { type: "fill_gap", content: fillGap, max_score: 5 },
+      { type: "mini_writing", content: miniWriting, max_score: 1 },
       { type: "writing_micro", content: writingMicro, max_score: 3 },
     ],
   };
@@ -423,6 +446,154 @@ Important: Return ONLY the JSON object, no other text.`,
 
   const text = response.content[0].type === "text" ? response.content[0].text : "";
   return extractJSON<WritingMicroContent>(text);
+}
+
+export async function generateMiniWriting(
+  topic: string,
+  _difficulty: string
+): Promise<MiniWritingContent> {
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 300,
+    messages: [
+      {
+        role: "user",
+        content: `Generate a mini writing exercise about "${topic}" for a Spanish-speaking English learner.
+
+The exercise is ONE sentence. Choose the most natural format for this topic:
+- "complete": sentence frame to complete (e.g., "If I could _____, I would choose _____ because _____.")
+- "use_word": use a specific word (e.g., "Write one sentence using the word 'renewable'.")
+- "reply": reply to a message (e.g., "Someone says: 'Do you think we use too much plastic?' Write a one-sentence reply.")
+- "describe": describe something (e.g., "Describe how ${topic} affects daily life in one sentence.")
+
+Requirements:
+- Prompt must relate to "${topic}"
+- Student writes exactly ONE sentence (5-30 words)
+- Friendly, low-pressure tone
+
+Return ONLY valid JSON:
+{
+  "type": "complete",
+  "prompt": "Your prompt text here..."
+}
+
+Important: Return ONLY the JSON object, no other text.`,
+      },
+    ],
+  });
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  return extractJSON<MiniWritingContent>(text);
+}
+
+function buildWordSearchGrid(
+  words: Array<{ word: string; definition: string; example: string }>
+): WordSearchContent {
+  const SIZE = 10;
+  const grid: string[][] = Array.from({ length: SIZE }, () =>
+    Array.from({ length: SIZE }, () => "")
+  );
+  const placed: WordSearchContent["words"] = [];
+
+  for (const wordData of words) {
+    const letters = wordData.word.toLowerCase().replace(/[^a-z]/g, "");
+    if (letters.length < 4 || letters.length > 8) continue;
+
+    let success = false;
+    for (let attempt = 0; attempt < 200 && !success; attempt++) {
+      const dir = Math.random() < 0.5 ? "horizontal" : "vertical";
+      const maxRow = dir === "horizontal" ? SIZE : SIZE - letters.length;
+      const maxCol = dir === "horizontal" ? SIZE - letters.length : SIZE;
+      const startRow = Math.floor(Math.random() * (maxRow + 1));
+      const startCol = Math.floor(Math.random() * (maxCol + 1));
+
+      let canPlace = true;
+      for (let i = 0; i < letters.length; i++) {
+        const r = dir === "horizontal" ? startRow : startRow + i;
+        const c = dir === "horizontal" ? startCol + i : startCol;
+        const cell = grid[r][c];
+        if (cell !== "" && cell !== letters[i]) {
+          canPlace = false;
+          break;
+        }
+      }
+
+      if (canPlace) {
+        for (let i = 0; i < letters.length; i++) {
+          const r = dir === "horizontal" ? startRow : startRow + i;
+          const c = dir === "horizontal" ? startCol + i : startCol;
+          grid[r][c] = letters[i];
+        }
+        placed.push({
+          word: wordData.word,
+          definition: wordData.definition,
+          example: wordData.example,
+          startRow,
+          startCol,
+          direction: dir,
+        });
+        success = true;
+      }
+    }
+  }
+
+  // Fill empty cells with random letters
+  const alpha = "abcdefghijklmnopqrstuvwxyz";
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (!grid[r][c]) {
+        grid[r][c] = alpha[Math.floor(Math.random() * alpha.length)];
+      }
+    }
+  }
+
+  return { grid, words: placed };
+}
+
+export async function generateWordSearch(
+  topic: string,
+  _difficulty: string
+): Promise<WordSearchContent> {
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 800,
+    messages: [
+      {
+        role: "user",
+        content: `Generate 4 vocabulary words related to "${topic}" for a word search puzzle.
+
+Requirements:
+- B1-B2 level practical vocabulary (NOT academic/GRE-level)
+- CRITICAL: Each word must be 4-8 letters long (grid is 10x10)
+- Each word must be a single word — no spaces, no hyphens
+- Words related to "${topic}"
+- Simple 1-line definition and a natural example sentence for each
+
+Return ONLY valid JSON:
+{
+  "words": [
+    {
+      "word": "solar",
+      "definition": "relating to the sun or using energy from the sun",
+      "example": "Solar panels are becoming cheaper every year."
+    }
+  ]
+}
+
+Important: Return exactly 4 words, each 4-8 letters. Return ONLY the JSON object, no other text.`,
+      },
+    ],
+  });
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  const parsed = extractJSON<{ words: Array<{ word: string; definition: string; example: string }> }>(text);
+
+  // Keep only words that fit the grid (4-8 letters, letters only)
+  const valid = parsed.words
+    .filter((w) => /^[a-zA-Z]{4,8}$/.test(w.word))
+    .slice(0, 4);
+
+  return buildWordSearchGrid(valid);
 }
 
 export async function fetchTopicImage(topic: string): Promise<string> {

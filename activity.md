@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-07
-**Tasks Completed:** 5 of 10 (FIX-1, FIX-2, FIX-3, FIX-4, NEW-1 done)
-**Current Task:** NEW-2 — Content generation for mini_writing and word_search
+**Tasks Completed:** 6 of 10 (FIX-1, FIX-2, FIX-3, FIX-4, NEW-1, NEW-2 done)
+**Current Task:** NEW-3 — Grading for mini_writing and word_search
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,17 @@
 ---
 
 ## Session Log
+
+### 2026-04-07 — NEW-2: Content generation for mini_writing and word_search
+- Added `MiniWritingContent` and `WordSearchContent` interfaces to src/services/content.ts
+- Updated `GeneratedBoard` tuple type to include 7 exercises (added word_search slot 4, mini_writing slot 6)
+- Added `generateMiniWriting(topic, difficulty)`: Claude generates a 1-sentence prompt in one of 4 formats (complete/use_word/reply/describe), related to the day's topic
+- Added `buildWordSearchGrid()`: pure TypeScript grid algorithm — places words horizontally/vertically without overlap, fills remaining cells with random a-z letters
+- Added `generateWordSearch(topic, difficulty)`: Claude picks 4 B1-B2 words (4-8 letters), then `buildWordSearchGrid()` places them in a 10x10 grid
+- Updated `generateBoard()`: calls `generateMiniWriting` and `generateWordSearch` in parallel with other generators, returns 7 exercises in order: long_reading, short_reading, vocabulary, word_search, fill_gap, mini_writing, writing_micro
+- Files changed: src/services/content.ts
+- Build: passes with zero errors
+---
 
 ### 2026-04-07 — NEW-1: DB + types for 2 new exercise types
 - Added 'mini_writing' | 'word_search' to ExerciseType union in src/db.ts

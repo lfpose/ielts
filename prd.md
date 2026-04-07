@@ -113,7 +113,7 @@ V3 done with 3 rendering bugs + user feedback: shorter passages, easier vocabula
       "Create 7 exercises (slots 1-7): long_reading, short_reading, vocabulary, word_search, fill_gap, mini_writing, writing_micro",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",
