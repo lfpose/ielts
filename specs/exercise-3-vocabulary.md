@@ -8,9 +8,11 @@ Expand the user's vocabulary. Introduce new or less common words and make the us
 ### The Words
 - 6 words per exercise
 - Sourced from the day's long reading article (or the theme)
-- Target: academic or upper-intermediate words the student likely doesn't know yet
-  - Good: "ubiquitous", "mitigate", "unprecedented", "albeit"
-  - Bad: "house", "important", "because"
+- Target: practical, useful vocabulary at B1-B2 level — words a Spanish speaker would encounter in everyday English but might not know confidently
+  - Good: "sustainable", "shortage", "affordable", "deadline", "achieve", "struggle"
+  - Too easy: "house", "important", "because"
+  - Too hard: "ubiquitous", "mitigate", "unprecedented", "albeit", "democratization", "unpalatable"
+- The goal is to build a FUNCTIONAL vocabulary, not an academic one. Think words you'd find in a newspaper or conversation, not a PhD thesis.
 - Each word comes with:
   - A definition (clear, simple English — not dictionary jargon)
   - The sentence from the article where it appeared (context)

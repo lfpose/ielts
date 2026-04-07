@@ -11,7 +11,7 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
 - **Hosting**: Fly.io
 
 ## Current State
-V3-1 and V3-2 done but with rendering bugs found in production. 3 fix tasks added.
+V3 done with 3 rendering bugs + user feedback: shorter passages, easier vocabulary, line breaks in short reading, 2 new exercises (mini writing + word search). 10 new tasks.
 
 ## Spec files to read
 - `specs/improvements-v3.md` — **primary reference for v3 dashboard redesign**
@@ -71,6 +71,117 @@ V3-1 and V3-2 done but with rendering bugs found in production. 3 fix tasks adde
       "Feedback after submit: correct green, incorrect red with context sentence shown",
       "Mobile: words as horizontal scroll row, definitions stacked below",
       "Start local server, open vocabulary exercise with agent-browser, verify cards render (NOT a table), verify JS interaction works by checking snapshot shows clickable elements",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "bugfix",
+    "description": "FIX-4: Content pipeline fixes — shorter long reading, easier vocabulary, short reading line breaks. In src/services/content.ts: (1) Update generateLongReading prompt to request 250-350 words instead of 500-700, with short paragraphs and clear line breaks. (2) Update generateVocabulary prompt to target B1-B2 practical vocabulary — words like 'sustainable', 'shortage', 'affordable', 'deadline' — NOT academic words like 'ubiquitous', 'mitigate', 'democratization'. Add explicit instruction: 'Choose practical, everyday vocabulary a Spanish speaker would encounter in conversations and news. Avoid academic or GRE-level words.' (3) Update generateShortReading prompt to require paragraph breaks every 2-3 sentences — never a wall of text. Read updated specs: specs/exercise-1-long-reading.md, specs/exercise-2-short-reading.md, specs/exercise-3-vocabulary.md.",
+    "steps": [
+      "Read the updated specs: specs/exercise-1-long-reading.md (250-350 words), specs/exercise-2-short-reading.md (paragraph breaks), specs/exercise-3-vocabulary.md (B1-B2 practical words)",
+      "Read src/services/content.ts — find generateLongReading, generateShortReading, generateVocabulary functions",
+      "Update generateLongReading prompt: change word count to 250-350, add 'Use short paragraphs of 3-4 sentences with clear line breaks'",
+      "Update generateShortReading prompt: add 'Use short paragraphs of 2-3 sentences. NEVER write one continuous block of text. Include line breaks between paragraphs.'",
+      "Update generateVocabulary prompt: change target level to B1-B2, add examples of good words (sustainable, shortage, affordable) and bad words (ubiquitous, mitigate, democratization), add 'Choose practical vocabulary a Spanish speaker needs for everyday English, not academic words'",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "feature",
+    "description": "NEW-1: DB + types for 2 new exercise types. Add 'mini_writing' and 'word_search' to the ExerciseType union in src/db.ts. Update daily board to have 7 exercise slots instead of 5. Update max score from 21 to 26 (5+2+6+4+5+1+3). Update any heatmap intensity thresholds or score calculations that reference 21 to use 26.",
+    "steps": [
+      "Read src/db.ts — find ExerciseType union type, update to include 'mini_writing' | 'word_search'",
+      "Update any max score constants or calculations that use 21 to use 26",
+      "Update getActivityData, getCurrentStreak, any heatmap functions that reference 21-point scale to use 26",
+      "Update getTodaysBoardWithStatus if it assumes 5 exercises — should work with 7",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "feature",
+    "description": "NEW-2: Content generation for mini_writing and word_search. In src/services/content.ts, add generateMiniWriting(topic) and generateWordSearch(topic) functions. Update generateBoard() to produce 7 exercises (slots 1-7) instead of 5. Mini writing generates a 1-sentence prompt (complete-the-sentence, use-the-word, or reply-to-message format). Word search generates a 10x10 grid with 4 hidden words placed horizontally or vertically, remaining cells filled with random letters.",
+    "steps": [
+      "Read specs/exercise-6-mini-writing.md and specs/exercise-7-word-search.md fully",
+      "Read src/services/content.ts — understand existing generation pattern",
+      "Add generateMiniWriting(topic: string, difficulty: string): returns { prompt: string, type: 'complete'|'use_word'|'reply'|'describe' } — vary the format, always related to day's topic",
+      "Add generateWordSearch(topic: string, difficulty: string): returns { grid: string[][], words: Array<{word, definition, example, startRow, startCol, direction}> }",
+      "Word search grid generation: (1) pick 4 topic-related B1-B2 words 4-8 chars long via Claude, (2) place words in 10x10 grid — horizontal or vertical only, no overlaps, (3) fill remaining cells with random a-z letters",
+      "Update generateBoard() to call generateMiniWriting and generateWordSearch in parallel with the other generators",
+      "Create 7 exercises (slots 1-7): long_reading, short_reading, vocabulary, word_search, fill_gap, mini_writing, writing_micro",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "feature",
+    "description": "NEW-3: Grading for mini_writing and word_search. In src/services/grading.ts, add gradeMiniWriting(content, answers) and gradeWordSearch(content, answers). Mini writing: call Claude for quick 1-sentence grammar check, score 0 or 1. Word search: compare found words against hidden words, score = number correctly found (0-4).",
+    "steps": [
+      "Read specs/exercise-6-mini-writing.md (scoring section) and specs/exercise-7-word-search.md (scoring section)",
+      "Read src/services/grading.ts — understand existing grading pattern",
+      "Add gradeMiniWriting(content, answers): call Claude API for quick evaluation — is the sentence grammatically acceptable and on-topic? Return score 0 or 1, feedback with correction if needed. Feedback in Spanish.",
+      "Add gradeWordSearch(content, answers): deterministic — compare submitted found-word positions against content.words positions. Score = number of correctly identified words (0-4). Feedback shows all 4 words with definitions.",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "feature",
+    "description": "NEW-4: Mini Writing template. Create src/templates/exercise-mini-writing.ts for Exercise 6. Compact layout: 'UNA FRASE' kicker, prompt in red-bordered box, single-line text input (not textarea), live word counter (5-30 words), submit button. After submit: feedback shows original sentence, correction if needed, score 0/1. Header: 'Ejercicio 6 de 7 · ~1 min'.",
+    "steps": [
+      "Read specs/exercise-6-mini-writing.md",
+      "Read src/templates/exercise-writing.ts as a pattern reference (similar but simpler)",
+      "Create src/templates/exercise-mini-writing.ts",
+      "Layout: header bar with 'Ejercicio 6 de 7 · ~1 min', kicker 'UNA FRASE' (dark-red accent), prompt box with red left border",
+      "Input: single-line <input type='text'> styled like textarea bottom-border-only, NOT a <textarea>",
+      "Word counter: 'X palabras', gray <5, green 5-30, red >30",
+      "Submit enabled only 5-30 words",
+      "Feedback: 'Tu oración: [text]', correction if grammar error, score badge 0/1 or 1/1",
+      "MUST verify with agent-browser — start local server, screenshot the page",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "feature",
+    "description": "NEW-5: Word Search template (Sopa de Letras game). Create src/templates/exercise-word-search.ts for Exercise 4. Interactive 10x10 letter grid. Tap cell to start selection, tap another in same row/col to complete selection. If letters spell a hidden word → cells turn green, word + definition + example appear below. 4 words to find. Counter 'X de 4 encontradas'. When all found, auto-submit. Vanilla JS.",
+    "steps": [
+      "Read specs/exercise-7-word-search.md fully",
+      "Read specs/improvements-v2.md section 4.4 for pair colors (reuse 4 of the 6 colors for found words)",
+      "Create src/templates/exercise-word-search.ts",
+      "Grid: 10x10 div grid, each cell 36px square (28px mobile), Inter 600 14px uppercase, 1px border, centered",
+      "Vanilla JS interaction: track selectedCells array. On cell click: if no selection start new selection, if same row/col as first cell extend selection to form a line, if different row AND col → deselect and restart",
+      "When selection complete (second tap): extract letters, check if they spell any unfound word. If match → mark cells with pair color, add word to found list. If no match → flash red 300ms, deselect.",
+      "Found words section below grid: word card with bold word (Playfair), definition (Inter), example (Lora italic), colored left border matching cell color",
+      "Counter above grid: 'X de 4 encontradas'",
+      "When 4 found: brief celebration animation, then show submit/complete button",
+      "Feedback: all 4 words with definitions + examples, score 4/4, 'Palabras guardadas en tu banco'",
+      "Header: 'Ejercicio 4 de 7 · ~3 min', kicker 'SOPA DE LETRAS'",
+      "Mobile: smaller cells (28px), grid still fits in viewport",
+      "MUST verify with agent-browser — check grid renders, cells are clickable",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "feature",
+    "description": "NEW-6: Dashboard + routes update for 7 exercises. Update src/templates/dashboard.ts layout for 7 exercises: feature (long reading), right column (short reading + vocabulary + word search), briefs row (fill gap + mini writing + writing micro — 3 items). Update src/routes/student.ts to handle mini_writing and word_search exercise types. Update exercise labels, accent colors, time estimates, and symbols maps to include the 2 new types.",
+    "steps": [
+      "Read specs/improvements-v3.md section 1.1 (updated exercise mapping for 7 exercises)",
+      "Read src/templates/dashboard.ts — update EXERCISE_LABELS, EXERCISE_ACCENT, EXERCISE_SYMBOL, EXERCISE_TIME maps to include mini_writing and word_search",
+      "mini_writing: label 'Una Frase', accent '#1a0000' (dark red, same family as writing), symbol '✏', time '~1 min'",
+      "word_search: label 'Sopa de Letras', accent '#1a3a3a' (teal), symbol '🔍' or grid symbol, time '~3 min'",
+      "Update dashboard layout: right column now has 3 items (short reading + vocabulary + word search), briefs row now has 3 items (fill gap + mini writing + writing micro)",
+      "Briefs row: 3-column grid on desktop (33% each), stack on mobile",
+      "Word search in right column: kicker 'SOPA DE LETRAS', '4 palabras escondidas', CTA 'Buscar →'",
+      "Mini writing in briefs: kicker 'UNA FRASE', 'Escribe una oración sobre el tema', CTA 'Escribir →'",
+      "Update progress dots: 7 dots instead of 5",
+      "Update max score references: 26 points instead of 21",
+      "Read src/routes/student.ts — add cases for 'mini_writing' → exercise-mini-writing template and 'word_search' → exercise-word-search template",
+      "Update grading route to call gradeMiniWriting and gradeWordSearch for the new types",
+      "MUST verify with agent-browser — dashboard shows 7 exercises, all links work",
       "Run npm run build — must pass with zero errors"
     ],
     "passes": false

@@ -15,14 +15,16 @@ Stop thinking in "cards". Think in **stories**. A newspaper front page has:
 - A **briefs section** at the bottom for minor items
 - **Section labels** that read like editorial headers, not UI labels
 
-Exercise mapping:
+Exercise mapping (7 exercises):
 | Exercise | Newspaper role | Visual weight |
 |----------|---------------|---------------|
-| Long Reading | Feature story | Big — ~60% of main area, with image |
-| Short Reading | Secondary story | Medium — right column, full card |
-| Vocabulary | Column item | Medium — right column below short reading |
-| Fill the Gap | Brief | Small — bottom row left |
-| Writing Micro | Brief | Small — bottom row right |
+| Long Reading | Feature story | Big — ~58% of main area, with image |
+| Short Reading | Secondary story | Medium — right column top |
+| Vocabulary Match | Column item | Medium — right column middle |
+| Word Search | Column item | Medium — right column bottom |
+| Fill the Gap | Brief | Small — bottom row |
+| Mini Writing | Brief | Small — bottom row |
+| Writing Micro | Brief | Small — bottom row |
 
 ### 1.2 Layout Structure
 

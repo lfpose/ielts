@@ -10,6 +10,7 @@ Quick reading comprehension. A short passage with 2 focused questions. Tests the
 - Can be a different topic from the long reading, OR a related subtopic
 - Slightly more accessible than the long reading (B1-B2 level)
 - Could be styled as: a news brief, a short report, a letter excerpt, an informational blurb
+- MUST use short paragraphs (2-3 sentences each) with clear line breaks between them — never one giant wall of text
 
 ### The Questions
 - 2 questions total

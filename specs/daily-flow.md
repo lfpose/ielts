@@ -21,13 +21,15 @@ Each day is a "board" — a set of 5 exercises generated together from a shared 
 
 | # | Type | Duration | Purpose |
 |---|---|---|---|
-| 1 | Long Reading | ~8 min | Deep comprehension |
+| 1 | Long Reading | ~5 min | Deep comprehension |
 | 2 | Short Reading | ~3 min | Quick inference |
-| 3 | Vocabulary | ~3 min | Expand new words |
-| 4 | Fill the Gap | ~3 min | Use known vocabulary |
-| 5 | Writing Micro | ~3 min | Produce language |
+| 3 | Vocabulary Match | ~3 min | Learn new words |
+| 4 | Word Search (Sopa de Letras) | ~3 min | Find + learn words (game) |
+| 5 | Fill the Gap | ~3 min | Apply known vocabulary |
+| 6 | Mini Writing (Una Frase) | ~1 min | Write 1 sentence |
+| 7 | Writing Micro | ~3 min | Write 2-3 sentences |
 
-Total: ~20 minutes per day.
+Total: ~21 minutes per day. Max score: 5+2+6+4+5+1+3 = 26 points.
 
 ## Exercise States
 

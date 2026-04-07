@@ -6,11 +6,12 @@ Deep reading comprehension. The user reads a medium-length article and answers 5
 ## Content
 
 ### The Article
-- 500-700 words
+- 250-350 words (concise — keep it digestible for daily practice)
 - Topic: general interest — science, culture, history, nature, society (IELTS Academic style)
 - Written or adapted by AI to be at an upper-intermediate level (B2-C1)
 - Should feel like a real article, not a textbook excerpt
 - Includes a title and source attribution (even if AI-generated, give it a "publication" feel)
+- Use short paragraphs (3-4 sentences each) with clear paragraph breaks
 
 ### The Questions
 - 5 questions total
