@@ -142,7 +142,7 @@ V3 done with 3 rendering bugs + user feedback: shorter passages, easier vocabula
       "MUST verify with agent-browser — start local server, screenshot the page",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",

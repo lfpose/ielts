@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-07
-**Tasks Completed:** 7 of 10 (FIX-1, FIX-2, FIX-3, FIX-4, NEW-1, NEW-2, NEW-3 done)
-**Current Task:** NEW-4 — Mini Writing template
+**Tasks Completed:** 8 of 10 (FIX-1, FIX-2, FIX-3, FIX-4, NEW-1, NEW-2, NEW-3, NEW-4 done)
+**Current Task:** NEW-5 — Word Search template
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,18 @@
 ---
 
 ## Session Log
+
+### 2026-04-07 — NEW-4: Mini Writing template
+- Created src/templates/exercise-mini-writing.ts with `renderMiniWriting()` function
+- Layout: header "Ejercicio 6 de 7 · ~1 min", kicker "UNA FRASE" in dark-red, red-left-bordered prompt box
+- Input: single-line `<input type="text">` with bottom-border-only style (not a textarea)
+- Word counter: gray <5, green 5-30, red >30, labeled "X palabras"
+- Submit enabled only when 5-30 words; score count-up animation on feedback
+- Feedback: "Tu oración:" label + user text, then green ✓ or red ✗ result card with correction/reason/comment
+- Wired up `renderMiniWriting` and `gradeMiniWriting` in src/routes/student.ts (replacing the stub from NEW-1)
+- Browser: verified correct rendering — kicker, prompt box, input, counter all visible
+- Build: passes with zero errors
+---
 
 ### 2026-04-07 — NEW-3: Grading for mini_writing and word_search
 - Added `MiniWritingAnswers`, `WordSearchAnswers` answer interfaces

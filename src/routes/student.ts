@@ -24,6 +24,7 @@ import {
   gradeVocabulary,
   gradeFillGap,
   gradeWritingMicro,
+  gradeMiniWriting,
 } from "../services/grading.js";
 import type {
   LongReadingContent,
@@ -31,6 +32,7 @@ import type {
   VocabularyContent,
   FillGapContent,
   WritingMicroContent,
+  MiniWritingContent,
 } from "../services/content.js";
 import { renderDashboard } from "../templates/dashboard.js";
 import { renderStatsPage } from "../templates/stats.js";
@@ -39,6 +41,7 @@ import { renderShortReading } from "../templates/exercise-short-reading.js";
 import { renderVocabulary } from "../templates/exercise-vocabulary.js";
 import { renderFillGap } from "../templates/exercise-fill-gap.js";
 import { renderWritingMicro } from "../templates/exercise-writing.js";
+import { renderMiniWriting } from "../templates/exercise-mini-writing.js";
 
 const app = new Hono();
 
@@ -53,7 +56,7 @@ const EXERCISE_RENDERERS: Record<ExerciseType, (user: User, exercise: any, submi
   vocabulary: renderVocabulary,
   fill_gap: renderFillGap,
   writing_micro: renderWritingMicro,
-  mini_writing: (_u, ex) => `<html><body><p>mini_writing exercise ${ex.id} — coming soon</p></body></html>`,
+  mini_writing: renderMiniWriting,
   word_search: (_u, ex) => `<html><body><p>word_search exercise ${ex.id} — coming soon</p></body></html>`,
 };
 
@@ -279,6 +282,13 @@ app.post("/:token/exercise/:exerciseId", async (c) => {
         gradeResult = await gradeWritingMicro(content as WritingMicroContent, transformed, user.name);
         storedAnswers = transformed;
         storedFeedback = gradeResult.feedback; // Writing feedback shape matches template
+        break;
+      }
+      case "mini_writing": {
+        const transformed = transformWritingAnswers(body);
+        gradeResult = await gradeMiniWriting(content as MiniWritingContent, { text: transformed.text });
+        storedAnswers = transformed;
+        storedFeedback = gradeResult.feedback;
         break;
       }
       default:
