@@ -1,0 +1,15 @@
+- generic [ref=e1]:
+  - button "Toggle theme" [ref=e2] [cursor=pointer]: ◐
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: Monday, April 6, 2026
+      - heading "The IELTS Daily" [level=1] [ref=e6]
+      - generic [ref=e7]: Práctica diaria de lectura
+    - generic [ref=e8]: ───── § ─────
+    - paragraph [ref=e9]: Ingresa tu correo electrónico para acceder a tus ejercicios de hoy.
+    - generic [ref=e10]:
+      - generic [ref=e11]: Correo electrónico
+      - textbox "Correo electrónico" [active] [ref=e12]:
+        - /placeholder: tu@correo.com
+      - button "Entrar →" [ref=e13] [cursor=pointer]
+    - generic [ref=e14]: Cada día un paso más cerca

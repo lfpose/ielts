@@ -1,0 +1,62 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]: Vol. 1 · LUNES, 6 DE ABRIL DE 2026
+    - generic [ref=e5]:
+      - text: Hola, test · Sin racha
+      - link "Stats" [ref=e6] [cursor=pointer]:
+        - /url: /s/1efdac66-aa85-4ba6-993f-c5237ba94ec7/stats
+      - button "☾" [ref=e7] [cursor=pointer]
+  - generic [ref=e8]: The IELTS Daily
+  - generic [ref=e9]: Read · Write · Improve · Repeat
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]: Tema del Día
+      - separator [ref=e14]
+    - generic [ref=e21]: The history of chocolate
+  - generic [ref=e22]:
+    - generic [ref=e23]:
+      - generic [ref=e25]: LECTURA PRINCIPAL
+      - generic [ref=e26]: "From Sacred Bean to Sweet Sensation: The Remarkable Journey of Chocolate"
+      - generic [ref=e27]: Chocolate's journey from ancient ceremonial drink to modern-day confection spans over three millennia, weaving through cultures and continents in a tale of tran…
+      - link "Comenzar lectura →" [ref=e28] [cursor=pointer]:
+        - /url: /s/1efdac66-aa85-4ba6-993f-c5237ba94ec7/exercise/16
+    - generic [ref=e29]:
+      - generic [ref=e30]: ANÁLISIS BREVE
+      - generic [ref=e31]: "Brief: Ancient Maya Chocolate Rituals Revealed Through Archaeological Discovery"
+      - generic [ref=e32]: Recent archaeological findings in Guatemala have provided fascinating insights into how the ancient Maya civilization used chocolate in their religious ceremoni…
+      - link "Leer →" [ref=e33] [cursor=pointer]:
+        - /url: /s/1efdac66-aa85-4ba6-993f-c5237ba94ec7/exercise/17
+      - separator [ref=e34]
+      - generic [ref=e35]: VOCABULARIO
+      - generic [ref=e36]: "[object Object] · [object Object] · [object Object] · [object Object] …"
+      - generic [ref=e37]: Juego de emparejamiento · 6 palabras
+      - link "Jugar →" [ref=e38] [cursor=pointer]:
+        - /url: /s/1efdac66-aa85-4ba6-993f-c5237ba94ec7/exercise/18
+  - generic [ref=e39]:
+    - generic [ref=e40]:
+      - generic [ref=e41]: EN BREVE
+      - separator [ref=e42]
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - generic [ref=e45]: COMPLETA LOS ESPACIOS
+        - generic [ref=e46]: Elige las palabras correctas para el párrafo
+        - link "Comenzar →" [ref=e47] [cursor=pointer]:
+          - /url: /s/1efdac66-aa85-4ba6-993f-c5237ba94ec7/exercise/19
+      - generic [ref=e48]:
+        - generic [ref=e49]: MICRO ESCRITURA
+        - generic [ref=e50]: Escribe 2-3 oraciones sobre el tema de hoy
+        - link "Escribir →" [ref=e51] [cursor=pointer]:
+          - /url: /s/1efdac66-aa85-4ba6-993f-c5237ba94ec7/exercise/20
+  - generic [ref=e52]:
+    - generic [ref=e53]:
+      - generic [ref=e54]: EDICIONES ANTERIORES
+      - separator [ref=e55]
+    - generic [ref=e56]:
+      - link "Dom 5 abr · How volcanoes work · 0/5" [ref=e57] [cursor=pointer]:
+        - /url: /s/1efdac66-aa85-4ba6-993f-c5237ba94ec7/exercise/11
+      - link "Vie 3 abr · The Great Barrier Reef · 0/5" [ref=e58] [cursor=pointer]:
+        - /url: /s/1efdac66-aa85-4ba6-993f-c5237ba94ec7/exercise/6
+      - link "Jue 2 abr · Dinosaurs and prehistoric life · 0/5" [ref=e59] [cursor=pointer]:
+        - /url: /s/1efdac66-aa85-4ba6-993f-c5237ba94ec7/exercise/1
+  - generic [ref=e60]: ✧ ✧ ✧
+  - generic [ref=e61]: The IELTS Daily · Read · Write · Improve · Repeat

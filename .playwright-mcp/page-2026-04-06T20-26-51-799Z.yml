@@ -1,0 +1,113 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "← Volver al tablero" [ref=e4] [cursor=pointer]:
+      - /url: /s/1efdac66-aa85-4ba6-993f-c5237ba94ec7
+    - generic [ref=e5]: Ejercicio 1 de 5
+    - generic [ref=e6]: ~8 min
+  - generic [ref=e7]: Lectura Larga
+  - 'heading "From Sacred Bean to Sweet Sensation: The Remarkable Journey of Chocolate" [level=1] [ref=e8]'
+  - generic [ref=e9]:
+    - paragraph [ref=e10]: Chocolate's journey from ancient ceremonial drink to modern-day confection spans over three millennia, weaving through cultures and continents in a tale of transformation that reflects broader patterns of global trade and cultural exchange. What began as a bitter beverage reserved for Maya and Aztec nobility has evolved into one of the world's most beloved and commercially significant foods.
+    - paragraph [ref=e11]: The story begins in Mesoamerica, where the cacao tree (Theobroma cacao) grew wild in the rainforests of present-day Mexico and Central America. Archaeological evidence suggests that the Maya were cultivating cacao as early as 1500 BCE, grinding the beans into a paste and mixing it with water, spices, and sometimes honey to create a frothy, bitter drink called 'xocolatl.' This beverage held profound religious significance, with cacao beans considered gifts from the gods and used as currency in trade. The Maya believed that cacao possessed divine properties, and the drink was consumed during religious ceremonies and by the elite class as a symbol of power and status.
+    - paragraph [ref=e12]: When the Aztecs rose to prominence, they inherited and expanded upon Maya chocolate traditions. Emperor Montezuma II reportedly consumed up to 50 cups of chocolate daily, believing it provided strength and vitality. The Aztecs refined the preparation process, developing specialized tools like the molinillo (wooden whisk) to create the characteristic foam that topped their chocolate drinks. Unlike modern chocolate, these early versions contained no sugar and were often flavored with chili peppers, vanilla, or other local spices, creating a complex, often bitter taste profile.
+    - paragraph [ref=e13]: The European encounter with chocolate began in 1519 when Spanish conquistador Hernán Cortés first observed Aztec chocolate consumption. Initially, Europeans found the bitter drink unpalatable, but Spanish colonists gradually adapted the recipe by adding sugar and warm spices like cinnamon. This sweetened version became popular among Spanish nobility, and for nearly a century, Spain maintained a virtual monopoly on chocolate in Europe. The drink slowly spread to other European courts through marriage alliances and diplomatic gifts, reaching France, Italy, and eventually England by the mid-17th century.
+    - paragraph [ref=e14]: The Industrial Revolution marked a pivotal transformation in chocolate's history. In 1828, Dutch chemist Coenraad van Houten invented a hydraulic press that separated cocoa butter from cocoa solids, creating cocoa powder and making chocolate drinks more affordable and easier to prepare. This innovation laid the groundwork for solid chocolate. In 1847, British company J.S. Fry & Sons created the first modern chocolate bar by combining cocoa powder, sugar, and cocoa butter. Swiss chocolatier Daniel Peter revolutionized the industry again in 1875 by adding condensed milk to create milk chocolate, while his compatriot Rodolphe Lindt developed the conching process in 1879, which gave chocolate its smooth, melt-in-the-mouth texture.
+    - paragraph [ref=e15]: The 20th century witnessed chocolate's democratization and global expansion. Mass production techniques made chocolate affordable for ordinary consumers, while marketing campaigns transformed it from a luxury item into an everyday treat. Companies like Hershey's in America and Cadbury in Britain pioneered industrial chocolate production, creating iconic brands that remain popular today. The development of new varieties, from white chocolate to sugar-free alternatives, has continued to expand chocolate's appeal across diverse consumer preferences and dietary requirements.
+    - paragraph [ref=e16]: Today, the global chocolate industry is worth over $130 billion annually, yet it faces challenges including sustainable farming practices, fair trade concerns, and climate change impacts on cacao cultivation. Despite these challenges, chocolate remains one of humanity's most cherished foods, testament to its remarkable journey from ancient ritual drink to modern global phenomenon.
+  - separator [ref=e17]
+  - generic [ref=e18]: Preguntas
+  - generic [ref=e19]:
+    - generic [ref=e20]:
+      - generic [ref=e21]:
+        - generic [ref=e22]: "1"
+        - generic [ref=e23]:
+          - generic [ref=e24]: What is the main purpose of this passage?
+          - generic [ref=e25]:
+            - generic [ref=e26] [cursor=pointer]:
+              - radio "A To explain the health benefits of chocolate consumption"
+              - generic [ref=e27]: A
+              - generic [ref=e28]: To explain the health benefits of chocolate consumption
+            - generic [ref=e29] [cursor=pointer]:
+              - radio "B To trace the historical development of chocolate from ancient times to the present"
+              - generic [ref=e30]: B
+              - generic [ref=e31]: To trace the historical development of chocolate from ancient times to the present
+            - generic [ref=e32] [cursor=pointer]:
+              - radio "C To compare chocolate production methods across different countries"
+              - generic [ref=e33]: C
+              - generic [ref=e34]: To compare chocolate production methods across different countries
+            - generic [ref=e35] [cursor=pointer]:
+              - radio "D To analyze the economic impact of the chocolate industry"
+              - generic [ref=e36]: D
+              - generic [ref=e37]: To analyze the economic impact of the chocolate industry
+      - generic [ref=e38]:
+        - generic [ref=e39]: "2"
+        - generic [ref=e40]:
+          - generic [ref=e41]: The Maya used cacao beans as a form of currency.
+          - generic [ref=e42]:
+            - generic [ref=e43] [cursor=pointer]:
+              - radio "Verdadero"
+              - generic [ref=e44]: Verdadero
+            - generic [ref=e45] [cursor=pointer]:
+              - radio "Falso"
+              - generic [ref=e46]: Falso
+            - generic [ref=e47] [cursor=pointer]:
+              - radio "No se menciona"
+              - generic [ref=e48]: No se menciona
+      - generic [ref=e49]:
+        - generic [ref=e50]: "3"
+        - generic [ref=e51]:
+          - generic [ref=e52]: According to the passage, what made Spanish chocolate different from the original Aztec version?
+          - generic [ref=e53]:
+            - generic [ref=e54] [cursor=pointer]:
+              - radio "A It was served cold instead of hot"
+              - generic [ref=e55]: A
+              - generic [ref=e56]: It was served cold instead of hot
+            - generic [ref=e57] [cursor=pointer]:
+              - radio "B It was made with different types of cacao beans"
+              - generic [ref=e58]: B
+              - generic [ref=e59]: It was made with different types of cacao beans
+            - generic [ref=e60] [cursor=pointer]:
+              - radio "C It contained sugar and warm spices instead of chili peppers"
+              - generic [ref=e61]: C
+              - generic [ref=e62]: It contained sugar and warm spices instead of chili peppers
+            - generic [ref=e63] [cursor=pointer]:
+              - radio "D It was consumed by common people rather than nobility"
+              - generic [ref=e64]: D
+              - generic [ref=e65]: It was consumed by common people rather than nobility
+      - generic [ref=e66]:
+        - generic [ref=e67]: "4"
+        - generic [ref=e68]:
+          - generic [ref=e69]: Daniel Peter invented the conching process that gives chocolate its smooth texture.
+          - generic [ref=e70]:
+            - generic [ref=e71] [cursor=pointer]:
+              - radio "Verdadero"
+              - generic [ref=e72]: Verdadero
+            - generic [ref=e73] [cursor=pointer]:
+              - radio "Falso"
+              - generic [ref=e74]: Falso
+            - generic [ref=e75] [cursor=pointer]:
+              - radio "No se menciona"
+              - generic [ref=e76]: No se menciona
+      - generic [ref=e77]:
+        - generic [ref=e78]: "5"
+        - generic [ref=e79]:
+          - generic [ref=e80]: What can be inferred about the current state of the chocolate industry?
+          - generic [ref=e81]:
+            - generic [ref=e82] [cursor=pointer]:
+              - radio "A It is declining due to health concerns about sugar consumption"
+              - generic [ref=e83]: A
+              - generic [ref=e84]: It is declining due to health concerns about sugar consumption
+            - generic [ref=e85] [cursor=pointer]:
+              - radio "B It is highly profitable but faces sustainability and ethical challenges"
+              - generic [ref=e86]: B
+              - generic [ref=e87]: It is highly profitable but faces sustainability and ethical challenges
+            - generic [ref=e88] [cursor=pointer]:
+              - radio "C It is dominated entirely by European chocolate manufacturers"
+              - generic [ref=e89]: C
+              - generic [ref=e90]: It is dominated entirely by European chocolate manufacturers
+            - generic [ref=e91] [cursor=pointer]:
+              - radio "D It has solved most problems related to cacao farming"
+              - generic [ref=e92]: D
+              - generic [ref=e93]: It has solved most problems related to cacao farming
+    - button "Enviar respuestas" [disabled] [ref=e95]
+  - generic [ref=e96]: The IELTS Daily
