@@ -31,24 +31,45 @@ If `npm run build` fails:
 3. Run `npm run build` again
 4. Do not commit until it passes.
 
-## Verify in Browser
+## Verify in Browser (MANDATORY for UI tasks)
 
-For tasks that produce visible UI (templates, pages), verify visually with agent-browser:
+For ANY task that touches templates, pages, or rendering logic — you MUST verify visually.
 
 ```bash
-# Start the server in background
-npm run build && node dist/index.js &
+# Kill any leftover server
+pkill -f "node dist/index.js" 2>/dev/null || true
+
+# Start server with dummy env vars
+npm run build && RESEND_API_KEY=dummy ANTHROPIC_API_KEY=dummy node dist/index.js &
 SERVER_PID=$!
-sleep 2
+sleep 3
 
-# Open and screenshot
-agent-browser open http://localhost:3000
-agent-browser screenshot screenshots/[task-id].png
+# Find a user token
+TOKEN=$(RESEND_API_KEY=dummy ANTHROPIC_API_KEY=dummy node --input-type=module -e "
+import { getAllUsers } from './dist/db.js';
+const u = getAllUsers();
+if (u.length) console.log(u[0].token);
+else console.log('NO_USERS');
+" 2>/dev/null)
 
-# Check for console errors
+# Screenshot the page you changed
+agent-browser open "http://localhost:8080/s/$TOKEN"
+agent-browser screenshot "screenshots/verify-[task-id].png"
 agent-browser snapshot -i -c
+```
 
-# Kill server
+### Check for rendering bugs
+
+After taking the screenshot, inspect the page output for these common issues:
+- `[object Object]` in any visible text — means you're rendering an object instead of a string property
+- `undefined` in any visible text — means a field name mismatch
+- Blank/empty image areas — means the image URL is missing or broken
+- Console errors in the snapshot output
+
+If you find ANY of these issues, fix them before committing. Do NOT mark a task as passing if the browser shows rendering bugs.
+
+```bash
+# Kill server when done
 kill $SERVER_PID 2>/dev/null || true
 ```
 

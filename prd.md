@@ -11,7 +11,7 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
 - **Hosting**: Fly.io
 
 ## Current State
-All v2 tasks complete. Two new tasks prepended for the v3 editorial redesign.
+V3-1 and V3-2 done but with rendering bugs found in production. 3 fix tasks added.
 
 ## Spec files to read
 - `specs/improvements-v3.md` — **primary reference for v3 dashboard redesign**
@@ -27,6 +27,54 @@ All v2 tasks complete. Two new tasks prepended for the v3 editorial redesign.
 
 ```json
 [
+  {
+    "category": "bugfix",
+    "description": "FIX-1: Dashboard — topic image not loading. The dithered image area in the feature story card is blank (gray rectangle). Debug: read src/templates/dashboard.ts and check how the image URL from board.illustration JSON is being used in the <img> tag. Read src/services/content.ts fetchTopicImage() to verify it actually returns a URL. Test with a real board in the DB — check what illustration field contains. The image URL from Wikipedia may need a fallback, or the <img> src might be empty. Also verify the CSS dithering filter isn't hiding the image (check mix-blend-mode, contrast, brightness values). MUST verify fix with agent-browser screenshot.",
+    "steps": [
+      "Read src/templates/dashboard.ts — find the feature image rendering code",
+      "Read src/services/content.ts — find fetchTopicImage() and check what URL it returns",
+      "Check the DB: query a board's illustration field to see what's actually stored",
+      "Fix the image rendering: ensure the <img> src gets the correct URL from the parsed illustration JSON",
+      "If Wikipedia images have CORS issues, try using the original image URL (not thumbnail) or add crossorigin attribute",
+      "If no image URL exists for a board, show a CSS gradient fallback (not a blank area)",
+      "Start local server with dummy env vars, open dashboard with agent-browser, verify the image loads or fallback shows",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "bugfix",
+    "description": "FIX-2: Dashboard — vocabulary word preview shows [object Object]. In the right column vocabulary section, the word preview line renders as '[object Object] · [object Object] · ...' instead of actual words. The template is rendering the word objects directly instead of extracting the .word string property. Fix: in src/templates/dashboard.ts, find where vocabulary exercise words are displayed and change to map over the words array extracting the word string — e.g. words.map(w => w.word).join(' · '). MUST verify fix with agent-browser screenshot.",
+    "steps": [
+      "Read src/templates/dashboard.ts — search for the vocabulary word preview rendering (look for 'VOCABULARIO' section or word preview code)",
+      "The content JSON for vocabulary exercises has shape: { words: [{ word: string, definition: string, context: string }, ...] }",
+      "Fix: parse the content JSON, then map words extracting the .word property: words.map((w: any) => w.word).slice(0, 4).join(' · ') + ' ...'",
+      "Start local server, open dashboard with agent-browser, verify word preview shows actual words like 'emissions · renewable · infrastructure · transition ...'",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "bugfix",
+    "description": "FIX-3: Vocabulary exercise — still renders as a plain HTML table instead of the tap-to-pair matching game. The template src/templates/exercise-vocabulary.ts should render two columns of tappable cards with vanilla JS tap-to-pair interaction, NOT a table. Read specs/improvements-v2.md section 4 for the full game design. Two columns: 6 word cards left, 6 shuffled definition cards right. Tap word → highlight → tap definition → pair connects with shared color. 6 pair colors. Tap to undo. Submit when all paired. MUST verify with agent-browser that the game renders as interactive cards, not a table.",
+    "steps": [
+      "Read specs/improvements-v2.md section 4 (full vocabulary game design)",
+      "Read current src/templates/exercise-vocabulary.ts — understand what's there now",
+      "If it renders a <table>, rewrite entirely to use div-based card layout",
+      "Left column: 6 word cards (div with class, Playfair Display 700, 2px border, rounded, clickable)",
+      "Right column: 6 definition cards (div, Inter 400 13px, same border/radius, shuffled order)",
+      "Vanilla JS: selectedWord state, click word → highlight, click definition → pair with shared color from 6-color palette",
+      "Pair colors from improvements-v2.md section 4.4: sage green, soft blue, warm amber, soft purple, soft rose, soft teal",
+      "Connection animation: CSS transition 200ms, both cards get shared bg+border color",
+      "Undo: click connected card → remove pairing",
+      "Submit enables when all 6 paired",
+      "Feedback after submit: correct green, incorrect red with context sentence shown",
+      "Mobile: words as horizontal scroll row, definitions stacked below",
+      "Start local server, open vocabulary exercise with agent-browser, verify cards render (NOT a table), verify JS interaction works by checking snapshot shows clickable elements",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
   {
     "category": "improvement",
     "description": "V3-1: Content pipeline — replace ASCII art with Wikipedia topic image. In src/services/content.ts, remove the Claude API call that generates ASCII illustrations. Replace with a fetchTopicImage(topic) function that calls the Wikipedia REST API (https://en.wikipedia.org/api/rest_v1/page/summary/{topic}) and returns the thumbnail.source URL. If not found, try Opensearch first result. If nothing, return empty string. Also generate a short editorial subheadline (1 journalistic sentence about the topic). Store both (imageUrl, subheadline) in the board's illustration field as JSON: {imageUrl, subheadline}.",
