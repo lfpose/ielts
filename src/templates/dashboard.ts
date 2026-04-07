@@ -170,7 +170,7 @@ export function renderDashboard(
     .col-secondary{padding:20px 0 20px 24px}
 
     /* Feature image with dither */
-    .feature-image{position:relative;overflow:hidden;background:var(--fg);aspect-ratio:16/9;margin-bottom:14px}
+    .feature-image{position:relative;overflow:hidden;background:var(--bg);aspect-ratio:16/9;margin-bottom:14px}
     .feature-image img{width:100%;height:100%;display:block;object-fit:cover;filter:grayscale(1) contrast(1.6) brightness(0.9);mix-blend-mode:multiply}
     .feature-image::after{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,#000 1px,transparent 1px);background-size:3px 3px;opacity:0.25;pointer-events:none}
     [data-theme="dark"] .feature-image img{mix-blend-mode:screen}
@@ -292,7 +292,7 @@ export function renderDashboard(
     <div class="main-cols">
       <div class="col-feature">
         ${imageUrl
-          ? `<div class="feature-image"><img src="${esc(imageUrl)}" alt="${esc(todaysBoard.board.topic)}"></div>`
+          ? `<div class="feature-image" id="feat-img-wrap"><img src="${esc(imageUrl)}" alt="${esc(todaysBoard.board.topic)}" onerror="document.getElementById('feat-img-wrap').outerHTML='<div class=\\'feature-image-placeholder\\'></div>'"></div>`
           : `<div class="feature-image-placeholder"></div>`}
         ${longReading ? `
         <div class="kicker kicker-navy">LECTURA PRINCIPAL</div>

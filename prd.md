@@ -40,7 +40,7 @@ V3 done with 3 rendering bugs + user feedback: shorter passages, easier vocabula
       "Start local server with dummy env vars, open dashboard with agent-browser, verify the image loads or fallback shows",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "bugfix",

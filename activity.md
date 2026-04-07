@@ -1,9 +1,9 @@
 # IELTS Daily - Activity Log
 
 ## Current Status
-**Last Updated:** 2026-04-05
-**Tasks Completed:** 13 of 13 (ALL COMPLETE)
-**Current Task:** All tasks done
+**Last Updated:** 2026-04-07
+**Tasks Completed:** 1 of 10 (FIX-1 done)
+**Current Task:** FIX-2 — vocabulary word preview [object Object]
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,14 @@
 ---
 
 ## Session Log
+
+### 2026-04-07 — FIX-1: Dashboard — topic image not loading
+- Root cause: `.feature-image { background: var(--fg) }` (`#111` near-black) + `mix-blend-mode: multiply` on the img caused all pixels to render near-black (invisible). Fix: changed to `background: var(--bg)` (cream/white) so multiply blend creates proper newspaper halftone effect.
+- Added `onerror` handler on `<img>` to swap to `.feature-image-placeholder` if the Wikipedia URL fails to load.
+- Files changed: src/templates/dashboard.ts
+- Build: passes with zero errors
+- Browser: verified image renders as dithered halftone with real Wikipedia URL
+---
 
 ### 2026-04-06 — V3-2: Dashboard — editorial newspaper masonry layout
 - Complete rewrite of src/templates/dashboard.ts to implement front-page newspaper layout from specs/improvements-v3.md
