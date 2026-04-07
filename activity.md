@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-07
-**Tasks Completed:** 3 of 10 (FIX-1, FIX-2, FIX-3 done)
-**Current Task:** FIX-4 — content pipeline fixes (shorter reading, easier vocab, line breaks)
+**Tasks Completed:** 4 of 10 (FIX-1, FIX-2, FIX-3, FIX-4 done)
+**Current Task:** NEW-1 — DB + types for 2 new exercise types
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,14 @@
 ---
 
 ## Session Log
+
+### 2026-04-07 — FIX-4: Content pipeline prompt fixes
+- Updated generateLongReading: 500-700 → 250-350 words, added "short paragraphs of 3-4 sentences with clear breaks"
+- Updated generateShortReading: added "2-3 sentences per paragraph, NEVER one continuous block of text"
+- Updated generateVocabulary: replaced academic word examples (ubiquitous/mitigate) with B1-B2 practical words (sustainable/shortage/affordable), added explicit instruction to avoid GRE-level vocabulary
+- Files changed: src/services/content.ts
+- Build: passes with zero errors
+---
 
 ### 2026-04-07 — FIX-3: Vocabulary exercise rendering
 - Verified template already renders correctly as tap-to-pair matching game (not a table)

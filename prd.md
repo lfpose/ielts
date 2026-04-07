@@ -86,7 +86,7 @@ V3 done with 3 rendering bugs + user feedback: shorter passages, easier vocabula
       "Update generateVocabulary prompt: change target level to B1-B2, add examples of good words (sustainable, shortage, affordable) and bad words (ubiquitous, mitigate, democratization), add 'Choose practical vocabulary a Spanish speaker needs for everyday English, not academic words'",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",

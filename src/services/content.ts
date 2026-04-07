@@ -197,7 +197,8 @@ export async function generateLongReading(
         content: `Generate an IELTS Academic Reading exercise about "${topic}".
 
 Requirements:
-- Write an original article of 500-700 words at ${difficulty} level
+- Write an original article of 250-350 words at ${difficulty} level
+- Use short paragraphs of 3-4 sentences each with clear paragraph breaks between them
 - The article should feel like a real publication (informative, engaging, well-structured)
 - Include a compelling title
 - Create exactly 5 questions that follow the order of the text:
@@ -254,6 +255,7 @@ export async function generateShortReading(
 
 Requirements:
 - Write a short passage of 150-250 words at B1-B2 level (slightly easier than ${difficulty})
+- Use short paragraphs of 2-3 sentences each. NEVER write one continuous block of text. Always include line breaks between paragraphs.
 - Style it as a news brief, short report, informational blurb, or letter excerpt
 - Include a descriptive title
 - Create exactly 2 questions. Choose 2 different types from:
@@ -309,9 +311,11 @@ ARTICLE TITLE: ${longReading.title}
 ARTICLE TEXT: ${longReading.passage}
 
 Requirements:
-- Choose 6 academic or upper-intermediate words FROM the article
-- Target words the student likely doesn't know yet (not basic words like "house", "important")
-- Good examples: "ubiquitous", "mitigate", "unprecedented", "albeit", "substantial"
+- Choose 6 practical, useful words at B1-B2 level FROM the article
+- Target vocabulary a Spanish speaker would encounter in everyday English — newspapers, conversations, work emails — but might not know confidently
+- Good examples: "sustainable", "shortage", "affordable", "deadline", "achieve", "struggle", "resource", "impact", "expand", "rely"
+- Avoid academic or GRE-level words: NOT "ubiquitous", "mitigate", "unprecedented", "albeit", "democratization", "unpalatable"
+- The goal is to build a FUNCTIONAL vocabulary, not an academic one
 - For each word provide:
   - A clear, simple definition (not dictionary jargon)
   - The exact sentence from the article where it appears (for context)
