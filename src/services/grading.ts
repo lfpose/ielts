@@ -5,6 +5,8 @@ import type {
   VocabularyContent,
   FillGapContent,
   WritingMicroContent,
+  MiniWritingContent,
+  WordSearchContent,
 } from "./content.js";
 
 const client = new Anthropic();
@@ -28,6 +30,14 @@ export interface FillGapAnswers {
 
 export interface WritingAnswers {
   text: string;
+}
+
+export interface MiniWritingAnswers {
+  text: string;
+}
+
+export interface WordSearchAnswers {
+  found_words: string[];
 }
 
 // =============================================
@@ -87,9 +97,27 @@ export interface WritingFeedback {
   };
 }
 
+export interface MiniWritingFeedback {
+  comment: string;
+  is_correct: boolean;
+  correction?: string;
+  reason?: string;
+}
+
+export interface WordSearchWordResult {
+  word: string;
+  definition: string;
+  example: string;
+  found: boolean;
+}
+
+export interface WordSearchFeedback {
+  results: WordSearchWordResult[];
+}
+
 export interface GradeResult {
   score: number;
-  feedback: ReadingFeedback | VocabularyFeedback | FillGapFeedback | WritingFeedback;
+  feedback: ReadingFeedback | VocabularyFeedback | FillGapFeedback | WritingFeedback | MiniWritingFeedback | WordSearchFeedback;
 }
 
 // =============================================
@@ -259,6 +287,78 @@ The corrections array can be empty if grammar is perfect. Include at most 3 corr
     (feedback.vocabulary?.score ?? 0);
 
   return { score, feedback };
+}
+
+// =============================================
+// AI grader (exercise 6 — mini writing)
+// =============================================
+
+export async function gradeMiniWriting(
+  content: MiniWritingContent,
+  answers: MiniWritingAnswers
+): Promise<GradeResult> {
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 512,
+    messages: [
+      {
+        role: "user",
+        content: `You are a friendly English teacher grading a one-sentence writing exercise for a Spanish-speaking IELTS student.
+
+The prompt was:
+"${content.prompt}"
+
+The student wrote:
+"${answers.text}"
+
+Evaluate lightly:
+- Is the sentence grammatically acceptable? (minor issues like missing articles are OK)
+- Does it address the prompt? (loosely — any reasonable attempt counts)
+- Is it in English?
+
+Score: 1 = acceptable sentence that addresses the prompt in English. 0 = off-topic, not in English, or has a major grammar error that makes it hard to understand.
+
+Return ONLY valid JSON (no markdown, no code fences):
+{
+  "comment": "Short encouraging comment in Spanish (1 sentence, e.g. '¡Bien hecho!' or 'Casi, sigue practicando.')",
+  "is_correct": true or false,
+  "correction": "corrected version of their sentence (only include if is_correct is false)",
+  "reason": "brief reason in Spanish (only include if is_correct is false, e.g. 'Falta el artículo antes de ...')"
+}`,
+      },
+    ],
+  });
+
+  const text =
+    response.content[0].type === "text" ? response.content[0].text : "{}";
+  const feedback = JSON.parse(text) as MiniWritingFeedback;
+  const score = feedback.is_correct ? 1 : 0;
+
+  return { score, feedback };
+}
+
+// =============================================
+// Deterministic grader (exercise 4 — word search)
+// =============================================
+
+export function gradeWordSearch(
+  content: WordSearchContent,
+  answers: WordSearchAnswers
+): GradeResult {
+  const results: WordSearchWordResult[] = content.words.map((w) => {
+    const found = answers.found_words.some(
+      (fw) => normalize(fw) === normalize(w.word)
+    );
+    return {
+      word: w.word,
+      definition: w.definition,
+      example: w.example,
+      found,
+    };
+  });
+
+  const score = results.filter((r) => r.found).length;
+  return { score, feedback: { results } };
 }
 
 // =============================================

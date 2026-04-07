@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-07
-**Tasks Completed:** 6 of 10 (FIX-1, FIX-2, FIX-3, FIX-4, NEW-1, NEW-2 done)
-**Current Task:** NEW-3 — Grading for mini_writing and word_search
+**Tasks Completed:** 7 of 10 (FIX-1, FIX-2, FIX-3, FIX-4, NEW-1, NEW-2, NEW-3 done)
+**Current Task:** NEW-4 — Mini Writing template
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,17 @@
 ---
 
 ## Session Log
+
+### 2026-04-07 — NEW-3: Grading for mini_writing and word_search
+- Added `MiniWritingAnswers`, `WordSearchAnswers` answer interfaces
+- Added `MiniWritingFeedback`, `WordSearchFeedback`, `WordSearchWordResult` feedback interfaces
+- Added `gradeMiniWriting()`: calls Claude API with lightweight prompt — scores 0 or 1, feedback in Spanish (comment + optional correction + reason)
+- Added `gradeWordSearch()`: deterministic — checks each submitted word against content.words (case-insensitive), score = correctly found count (0-4), feedback lists all 4 words with definitions/examples
+- Updated `GradeResult.feedback` union to include the two new feedback types
+- Imported `MiniWritingContent` and `WordSearchContent` from content.ts
+- Files changed: src/services/grading.ts
+- Build: passes with zero errors
+---
 
 ### 2026-04-07 — NEW-2: Content generation for mini_writing and word_search
 - Added `MiniWritingContent` and `WordSearchContent` interfaces to src/services/content.ts

@@ -125,7 +125,7 @@ V3 done with 3 rendering bugs + user feedback: shorter passages, easier vocabula
       "Add gradeWordSearch(content, answers): deterministic — compare submitted found-word positions against content.words positions. Score = number of correctly identified words (0-4). Feedback shows all 4 words with definitions.",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",
