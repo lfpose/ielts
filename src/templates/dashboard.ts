@@ -178,7 +178,8 @@ export function renderDashboard(
     .feature-image::after{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,#000 1px,transparent 1px);background-size:3px 3px;opacity:0.25;pointer-events:none}
     [data-theme="dark"] .feature-image img{mix-blend-mode:screen}
     @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .feature-image img{mix-blend-mode:screen}}
-    .feature-image-placeholder{aspect-ratio:16/9;background:linear-gradient(135deg,var(--muted) 0%,var(--n100) 100%);margin-bottom:14px}
+    .feature-image-placeholder{aspect-ratio:16/9;background:linear-gradient(135deg,var(--muted) 0%,var(--n100) 100%);margin-bottom:14px;display:flex;align-items:center;justify-content:center;padding:20px}
+    .feature-image-placeholder span{font-family:'Playfair Display',Georgia,serif;font-size:28px;font-weight:700;color:var(--n500);text-align:center;text-transform:uppercase;letter-spacing:2px;opacity:0.5}
 
     /* Kickers */
     .kicker{font-family:'Inter',sans-serif;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:3px;margin-bottom:6px;font-variant:small-caps}
@@ -297,8 +298,8 @@ export function renderDashboard(
     <div class="main-cols">
       <div class="col-feature">
         ${imageUrl
-          ? `<div class="feature-image" id="feat-img-wrap"><img src="${esc(imageUrl)}" alt="${esc(todaysBoard.board.topic)}" onerror="document.getElementById('feat-img-wrap').outerHTML='<div class=\\'feature-image-placeholder\\'></div>'"></div>`
-          : `<div class="feature-image-placeholder"></div>`}
+          ? `<div class="feature-image" id="feat-img-wrap" data-topic="${esc(todaysBoard.board.topic)}"><img src="${esc(imageUrl)}" alt="${esc(todaysBoard.board.topic)}" crossorigin="anonymous" onerror="var w=document.getElementById('feat-img-wrap');var d=document.createElement('div');d.className='feature-image-placeholder';var s=document.createElement('span');s.textContent=w.dataset.topic;d.appendChild(s);w.parentNode.replaceChild(d,w)"></div>`
+          : `<div class="feature-image-placeholder"><span>${esc(todaysBoard?.board.topic || "")}</span></div>`}
         ${longReading ? `
         <div class="kicker kicker-navy">LECTURA PRINCIPAL</div>
         <div class="story-title lg">${esc(lrData.title) || "Lectura Principal"}</div>

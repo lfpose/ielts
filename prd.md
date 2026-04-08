@@ -259,7 +259,7 @@ v4 feedback round: bug fixes, admin redesign, cron fix, word search hints, fill-
       "MUST verify with agent-browser that either the image loads OR the fallback looks good",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",

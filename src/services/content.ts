@@ -597,19 +597,20 @@ Important: Return exactly 4 words, each 4-8 letters. Return ONLY the JSON object
 }
 
 export async function fetchTopicImage(topic: string): Promise<string> {
-  // Try Wikipedia summary thumbnail first
+  // Try Wikipedia summary — prefer originalimage (larger), fall back to thumbnail
   try {
     const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic)}`;
     const res = await fetch(summaryUrl);
     if (res.ok) {
-      const data = await res.json() as { thumbnail?: { source?: string } };
+      const data = await res.json() as { originalimage?: { source?: string }; thumbnail?: { source?: string } };
+      if (data.originalimage?.source) return data.originalimage.source;
       if (data.thumbnail?.source) return data.thumbnail.source;
     }
   } catch {
     // Continue to fallback
   }
 
-  // Fallback: Opensearch → first result → summary thumbnail
+  // Fallback: Opensearch → first result → summary image
   try {
     const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(topic)}&limit=3&format=json`;
     const searchRes = await fetch(searchUrl);
@@ -620,7 +621,8 @@ export async function fetchTopicImage(topic: string): Promise<string> {
         const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
         const res = await fetch(summaryUrl);
         if (res.ok) {
-          const data = await res.json() as { thumbnail?: { source?: string } };
+          const data = await res.json() as { originalimage?: { source?: string }; thumbnail?: { source?: string } };
+          if (data.originalimage?.source) return data.originalimage.source;
           if (data.thumbnail?.source) return data.thumbnail.source;
         }
       }

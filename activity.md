@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-08
-**Tasks Completed:** 14 (V4-4 done)
-**Current Task:** V4-5
+**Tasks Completed:** 15 (V4-5 done)
+**Current Task:** V4-6
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,17 @@
 ---
 
 ## Session Log
+
+### 2026-04-08 — V4-5: Dashboard image deep fix
+- Updated fetchTopicImage() in content.ts to prefer `originalimage.source` (full-size Wikipedia image) over `thumbnail.source` — larger images are more reliably available
+- Added `crossorigin="anonymous"` to the `<img>` tag to prevent CORS blocking
+- Improved onerror fallback: instead of empty placeholder, now shows topic name as large serif text overlay using DOM manipulation (avoids inline HTML escaping issues)
+- Enhanced `.feature-image-placeholder` CSS: flexbox centering, Playfair Display font, uppercase topic text at 50% opacity
+- Fixed CSS variable: changed `--muted-fg` (undefined) to `--n500` in placeholder span
+- When imageUrl is empty (no Wikipedia image found), fallback placeholder also shows topic name text
+- Files changed: src/services/content.ts, src/templates/dashboard.ts
+- Build: passes with zero errors
+---
 
 ### 2026-04-08 — V4-4: Cron schedule change to midnight CLT
 - Changed cron.schedule from '0 7 * * *' to '0 4 * * *' (00:00 CLT = 04:00 UTC)
