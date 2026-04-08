@@ -57,14 +57,14 @@ function renderExercisePreview(exercise: Exercise): string {
     const title = content.title || "Untitled";
     const passage = (content.passage || "").substring(0, 200);
     const qCount = content.questions?.length || 0;
-    preview = `<strong>${esc(title)}</strong><br><span style="color:#737373">${esc(passage)}${passage.length >= 200 ? "..." : ""}</span><br><span style="color:#737373;font-size:12px">${qCount} questions</span>`;
+    preview = `<strong>${esc(title)}</strong><br><span class="text-muted">${esc(passage)}${passage.length >= 200 ? "..." : ""}</span><br><span class="text-muted" style="font-size:12px">${qCount} questions</span>`;
   } else if (type === "vocabulary") {
     const words = (content.words || []).map((w: { word: string }) => w.word).join(", ");
     preview = `<strong>Words:</strong> ${esc(words)}`;
   } else if (type === "fill_gap") {
     const paragraph = (content.paragraph || "").substring(0, 200);
     const bankSize = content.word_bank?.length || 0;
-    preview = `<span style="color:#737373">${esc(paragraph)}${paragraph.length >= 200 ? "..." : ""}</span><br><span style="color:#737373;font-size:12px">${bankSize} words in bank</span>`;
+    preview = `<span class="text-muted">${esc(paragraph)}${paragraph.length >= 200 ? "..." : ""}</span><br><span class="text-muted" style="font-size:12px">${bankSize} words in bank</span>`;
   } else if (type === "writing_micro") {
     const prompt = content.prompt || "";
     preview = `<strong>Prompt:</strong> ${esc(prompt)}`;
@@ -124,7 +124,7 @@ export function renderAdminDashboard(data: AdminData): string {
     </div>`;
 
   const userRows = users.map((u) => {
-    const streakDisplay = u.streak > 0 ? `<span class="streak-badge">${u.streak}d</span>` : `<span style="color:#999">0</span>`;
+    const streakDisplay = u.streak > 0 ? `<span class="streak-badge">${u.streak}d</span>` : `<span class="text-muted">0</span>`;
     const lastActive = u.lastActive || "Never";
     const completedDisplay = u.totalToday > 0 ? `${u.completedToday}/${u.totalToday}` : "&mdash;";
     return `<tr>
@@ -166,7 +166,7 @@ export function renderAdminDashboard(data: AdminData): string {
     </div>`;
 
   const emailLogRows = emailLogs.map((l) => {
-    const statusClass = l.status === "error" || l.status === "partial_failure" ? "status-error" : "status-success";
+    const statusClass = l.status === "error" || l.status === "partial_failure" ? "badge-error" : "badge-success";
     const statusLabel = l.status === "sent" || l.status === "success" ? "Sent" : l.status === "partial_failure" ? "Partial" : "Failed";
     const duration = l.duration_ms ? `${(l.duration_ms / 1000).toFixed(1)}s` : "&mdash;";
     const recipientCount = l.recipients ? l.recipients.split(",").length : 0;
@@ -187,7 +187,7 @@ export function renderAdminDashboard(data: AdminData): string {
       <td class="mono">${esc(l.sent_at)}</td>
       <td>${l.topic ? esc(l.topic) : "&mdash;"}</td>
       <td class="mono">${recipientCount} recipient${recipientCount !== 1 ? "s" : ""}</td>
-      <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+      <td><span class="badge-pill ${statusClass}">${statusLabel}</span></td>
       <td class="mono">${duration}</td>
       ${actionsCell}
     </tr>`;
@@ -237,9 +237,9 @@ export function renderAdminDashboard(data: AdminData): string {
 
   const topicRows = topics.map((t) => {
     const lastUsed = t.last_used_on || "Never";
-    const forcedBadge = t.forced_next ? '<span class="status-badge status-warning">Forced Next</span>' : "";
+    const forcedBadge = t.forced_next ? '<span class="badge-pill badge-warning">Forced Next</span>' : "";
     return `<tr data-topic-id="${t.id}">
-      <td class="mono" style="width:40px;color:#999">${t.position}</td>
+      <td class="mono" style="width:40px">${t.position}</td>
       <td>${esc(t.topic)} ${forcedBadge}</td>
       <td>${esc(lastUsed)}</td>
       <td class="mono">${t.times_used}</td>
@@ -306,149 +306,195 @@ export function renderAdminDashboard(data: AdminData): string {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
+    /* shadcn design tokens — light */
+    :root{
+      --admin-bg:#ffffff;
+      --admin-card:#ffffff;
+      --admin-border:#e2e8f0;
+      --admin-muted:#f1f5f9;
+      --admin-fg:#0f172a;
+      --admin-muted-fg:#64748b;
+      --admin-primary:#18181b;
+      --admin-primary-fg:#ffffff;
+      --admin-radius:8px;
+      --admin-shadow:0 1px 3px rgba(0,0,0,0.1);
+      --admin-font:Inter,system-ui,-apple-system,sans-serif;
+      --admin-destructive:#dc2626;
+      --admin-destructive-fg:#ffffff;
+      --admin-success:#16a34a;
+      --admin-success-bg:#dcfce7;
+      --admin-success-fg:#166534;
+      --admin-warning-bg:#fef9c3;
+      --admin-warning-fg:#854d0e;
+      --admin-error-bg:#fee2e2;
+      --admin-error-fg:#991b1b;
+      --admin-ring:#3b82f6;
+    }
+
+    /* shadcn design tokens — dark */
+    [data-theme="dark"]{
+      --admin-bg:#09090b;
+      --admin-card:#18181b;
+      --admin-border:#27272a;
+      --admin-muted:#27272a;
+      --admin-fg:#fafafa;
+      --admin-muted-fg:#a1a1aa;
+      --admin-primary:#fafafa;
+      --admin-primary-fg:#18181b;
+      --admin-shadow:0 1px 3px rgba(0,0,0,0.4);
+      --admin-destructive:#ef4444;
+      --admin-destructive-fg:#ffffff;
+      --admin-success:#22c55e;
+      --admin-success-bg:#14532d;
+      --admin-success-fg:#86efac;
+      --admin-warning-bg:#422006;
+      --admin-warning-fg:#fde68a;
+      --admin-error-bg:#450a0a;
+      --admin-error-fg:#fca5a5;
+      --admin-ring:#60a5fa;
+    }
+
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#fff;color:#111;min-height:100vh;font-size:14px;line-height:1.5}
+    body{font-family:var(--admin-font);background:var(--admin-bg);color:var(--admin-fg);min-height:100vh;font-size:14px;line-height:1.5}
+    .text-muted{color:var(--admin-muted-fg)}
 
     /* Layout shell */
     .layout{display:grid;grid-template-columns:240px 1fr;grid-template-rows:auto 1fr;min-height:100vh}
 
     /* Topbar */
-    .topbar{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:0 24px;height:52px;border-bottom:1px solid #e5e5e5;background:#fff;position:sticky;top:0;z-index:50}
+    .topbar{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:0 24px;height:52px;border-bottom:1px solid var(--admin-border);background:var(--admin-card);position:sticky;top:0;z-index:50}
     .topbar-left{display:flex;align-items:center;gap:12px}
-    .topbar h1{font-size:15px;font-weight:700;letter-spacing:-0.3px}
-    .topbar-right{display:flex;align-items:center;gap:16px}
-    .topbar-date{font-size:12px;color:#737373;font-weight:500}
-    .topbar-admin{font-size:11px;font-weight:600;color:#737373;background:#f5f5f5;padding:3px 10px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px}
-    .hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px;color:#111}
+    .topbar h1{font-size:15px;font-weight:700;letter-spacing:-0.3px;color:var(--admin-fg)}
+    .topbar-right{display:flex;align-items:center;gap:12px}
+    .topbar-date{font-size:12px;color:var(--admin-muted-fg);font-weight:500}
+    .hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--admin-fg)}
+
+    /* Dark mode toggle */
+    .theme-toggle{background:none;border:1px solid var(--admin-border);border-radius:6px;padding:6px 8px;cursor:pointer;color:var(--admin-muted-fg);display:flex;align-items:center;transition:all .15s}
+    .theme-toggle:hover{border-color:var(--admin-fg);color:var(--admin-fg)}
+
+    /* Logout */
+    .logout-btn{font-family:var(--admin-font);font-size:12px;font-weight:500;background:none;border:1px solid var(--admin-border);border-radius:6px;padding:6px 12px;cursor:pointer;color:var(--admin-muted-fg);transition:all .15s}
+    .logout-btn:hover{border-color:var(--admin-destructive);color:var(--admin-destructive)}
 
     /* Sidebar */
-    .sidebar{border-right:1px solid #e5e5e5;background:#F8F8F8;padding:16px 12px;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto}
-    .sidebar-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#999;padding:8px 12px 6px;margin-top:8px}
+    .sidebar{border-right:1px solid var(--admin-border);background:var(--admin-muted);padding:16px 12px;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto}
+    .sidebar-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--admin-muted-fg);padding:8px 12px 6px;margin-top:8px}
     .sidebar-label:first-child{margin-top:0}
-    .nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border:none;background:none;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;color:#525252;cursor:pointer;border-radius:6px;transition:all .12s;text-align:left}
-    .nav-item:hover{background:#EFEFEF;color:#111}
-    .nav-item.active{background:#fff;color:#111;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.06)}
-    .nav-item svg{flex-shrink:0;color:#999}
-    .nav-item.active svg{color:#111}
+    .nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border:none;background:none;font-family:var(--admin-font);font-size:13px;font-weight:500;color:var(--admin-muted-fg);cursor:pointer;border-radius:6px;transition:all .12s;text-align:left}
+    .nav-item:hover{background:var(--admin-card);color:var(--admin-fg)}
+    .nav-item.active{background:var(--admin-card);color:var(--admin-fg);font-weight:600;box-shadow:var(--admin-shadow)}
+    .nav-item svg{flex-shrink:0;color:var(--admin-muted-fg)}
+    .nav-item.active svg{color:var(--admin-fg)}
 
     /* Main content */
-    .main{padding:32px;overflow-y:auto;background:#fff;min-width:0}
+    .main{padding:32px;overflow-y:auto;background:var(--admin-bg);min-width:0}
     .page-section{display:none}
     .page-section.active{display:block}
-    .page-title{font-size:20px;font-weight:700;letter-spacing:-0.5px;margin-bottom:4px}
-    .page-desc{font-size:13px;color:#737373;margin-bottom:24px}
+    .page-title{font-size:20px;font-weight:700;letter-spacing:-0.5px;margin-bottom:4px;color:var(--admin-fg)}
+    .page-desc{font-size:13px;color:var(--admin-muted-fg);margin-bottom:24px}
 
-    /* Section card */
-    .card{border:1px solid #e5e5e5;border-radius:8px;margin-bottom:20px;overflow:hidden}
-    .card-header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid #e5e5e5;background:#fafafa}
-    .card-header h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
-    .card-body{padding:20px}
-    .card-footer{padding:12px 20px;border-top:1px solid #e5e5e5;background:#fafafa}
+    /* Cards */
+    .card{background:var(--admin-card);border:1px solid var(--admin-border);border-radius:var(--admin-radius);box-shadow:var(--admin-shadow);margin-bottom:20px;overflow:hidden}
+    .card-header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--admin-border);background:var(--admin-muted)}
+    .card-header h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--admin-fg)}
+    .card-body{padding:24px}
+    .card-footer{padding:12px 20px;border-top:1px solid var(--admin-border);background:var(--admin-muted)}
 
-    /* Badge */
-    .badge{font-size:11px;font-weight:500;color:#737373;background:#f0f0f0;padding:2px 8px;border-radius:4px}
+    /* Badges — rounded-full pills */
+    .badge{font-size:11px;font-weight:500;color:var(--admin-muted-fg);background:var(--admin-muted);padding:2px 10px;border-radius:9999px}
+    .badge-pill{font-size:11px;font-weight:600;padding:2px 10px;border-radius:9999px;display:inline-block}
+    .badge-success{background:var(--admin-success-bg);color:var(--admin-success-fg)}
+    .badge-warning{background:var(--admin-warning-bg);color:var(--admin-warning-fg)}
+    .badge-error{background:var(--admin-error-bg);color:var(--admin-error-fg)}
+    .badge-live{background:var(--admin-success-bg);color:var(--admin-success-fg)}
+    .badge-draft{background:var(--admin-warning-bg);color:var(--admin-warning-fg)}
 
     /* Metrics */
     .metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:0}
-    .metric-card{border:1px solid #e5e5e5;border-radius:8px;padding:16px;text-align:center}
-    .metric-value{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:#111}
-    .metric-label{font-size:11px;color:#737373;margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+    .metric-card{background:var(--admin-card);border:1px solid var(--admin-border);border-radius:var(--admin-radius);padding:16px;text-align:center}
+    .metric-value{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:var(--admin-fg)}
+    .metric-label{font-size:11px;color:var(--admin-muted-fg);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
 
     /* Tables */
     .table-wrap{overflow-x:auto}
     table{width:100%;border-collapse:collapse}
-    th{text-align:left;padding:10px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#737373;border-bottom:1px solid #e5e5e5;background:#fafafa}
-    td{padding:10px 16px;font-size:13px;border-bottom:1px solid #f0f0f0}
-    tbody tr:nth-child(even) td{background:#fafafa}
-    tr:hover td{background:#f3f3f3}
+    th{text-align:left;padding:10px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--admin-muted-fg);border-bottom:1px solid var(--admin-border);background:var(--admin-muted)}
+    td{padding:10px 16px;font-size:13px;border-bottom:1px solid var(--admin-border);color:var(--admin-fg)}
+    tr:hover td{background:var(--admin-muted)}
     .mono{font-family:'JetBrains Mono',monospace;font-size:12px}
 
     /* Action dropdown */
     .action-dropdown{position:relative;display:inline-block}
-    .action-dropdown-btn{background:#fff;border:1px solid #d4d4d4;border-radius:5px;padding:4px 10px;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:#111;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .12s}
-    .action-dropdown-btn:hover{border-color:#111;background:#f5f5f5}
-    .action-dropdown-menu{display:none;position:absolute;right:0;top:calc(100% + 4px);min-width:160px;background:#fff;border:1px solid #e5e5e5;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:30;padding:4px 0;overflow:hidden}
+    .action-dropdown-btn{background:var(--admin-card);border:1px solid var(--admin-border);border-radius:6px;padding:4px 10px;font-family:var(--admin-font);font-size:12px;font-weight:500;color:var(--admin-fg);cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .12s}
+    .action-dropdown-btn:hover{border-color:var(--admin-fg);background:var(--admin-muted)}
+    .action-dropdown-menu{display:none;position:absolute;right:0;top:calc(100% + 4px);min-width:160px;background:var(--admin-card);border:1px solid var(--admin-border);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:30;padding:4px 0;overflow:hidden}
     .action-dropdown-menu.open{display:block}
-    .action-dropdown-item{display:block;width:100%;padding:7px 14px;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:#111;background:none;border:none;cursor:pointer;text-align:left;text-decoration:none;transition:background .1s}
-    .action-dropdown-item:hover{background:#f5f5f5}
-    .action-dropdown-item.danger{color:#dc2626}
-    .action-dropdown-item.danger:hover{background:#fef2f2}
-    .action-dropdown-divider{height:1px;background:#e5e5e5;margin:4px 0}
-
-    /* Status badges */
-    .status-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;display:inline-block}
-    .status-success{background:#dcfce7;color:#166534}
-    .status-warning{background:#fef9c3;color:#854d0e}
-    .status-error{background:#fee2e2;color:#991b1b}
-    .status-draft{background:#fef9c3;color:#854d0e}
+    .action-dropdown-item{display:block;width:100%;padding:7px 14px;font-family:var(--admin-font);font-size:12px;font-weight:500;color:var(--admin-fg);background:none;border:none;cursor:pointer;text-align:left;text-decoration:none;transition:background .1s}
+    .action-dropdown-item:hover{background:var(--admin-muted)}
+    .action-dropdown-item.danger{color:var(--admin-destructive)}
+    .action-dropdown-item.danger:hover{background:var(--admin-error-bg)}
+    .action-dropdown-divider{height:1px;background:var(--admin-border);margin:4px 0}
 
     /* Streak badge */
-    .streak-badge{background:#fef3c7;color:#92400e;font-size:12px;font-weight:600;padding:1px 6px;border-radius:3px}
+    .streak-badge{background:var(--admin-warning-bg);color:var(--admin-warning-fg);font-size:12px;font-weight:600;padding:1px 8px;border-radius:9999px}
 
     /* Buttons */
-    .btn{font-family:'Inter',sans-serif;background:#111;color:#fff;border:none;padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;border-radius:6px;transition:background .15s}
-    .btn:hover{background:#333}
+    .btn{font-family:var(--admin-font);background:var(--admin-primary);color:var(--admin-primary-fg);border:none;padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;border-radius:6px;transition:background .15s}
+    .btn:hover{opacity:0.9}
     .btn-sm{padding:6px 14px;font-size:12px}
-    .btn-outline{background:transparent;color:#111;border:1px solid #d4d4d4;border-radius:6px;padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
-    .btn-outline:hover{border-color:#111;background:#f5f5f5}
-    .btn-danger{background:#dc2626;color:#fff}
-    .btn-danger:hover{background:#b91c1c}
-    .btn-success{background:#16a34a;color:#fff}
-    .btn-success:hover{background:#15803d}
-
-    /* Action links */
-    .action-link{background:none;border:none;color:#2563eb;font-size:12px;font-weight:500;cursor:pointer;padding:2px 4px;text-decoration:none}
-    .action-link:hover{text-decoration:underline}
-    .action-link.danger{color:#dc2626}
-
-    /* Error text */
-    .error-text{color:#dc2626;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .btn-outline{background:transparent;color:var(--admin-fg);border:1px solid var(--admin-border);border-radius:6px;padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--admin-font);transition:all .15s}
+    .btn-outline:hover{border-color:var(--admin-fg);background:var(--admin-muted)}
+    .btn-danger{background:var(--admin-destructive);color:var(--admin-destructive-fg)}
+    .btn-danger:hover{opacity:0.9}
+    .btn-success{background:var(--admin-success);color:#fff}
+    .btn-success:hover{opacity:0.9}
 
     /* Forms */
     .inline-form{display:flex;gap:8px;align-items:center}
-    .inline-form input[type="text"],.inline-form input[type="email"]{font-family:'Inter',sans-serif;border:1px solid #d4d4d4;padding:6px 12px;font-size:13px;border-radius:6px;outline:none;min-width:160px}
-    .inline-form input:focus{border-color:#111;box-shadow:0 0 0 1px #111}
+    .inline-form input[type="text"],.inline-form input[type="email"]{font-family:var(--admin-font);border:1px solid var(--admin-border);padding:6px 12px;font-size:13px;border-radius:6px;outline:none;min-width:160px;background:var(--admin-card);color:var(--admin-fg)}
+    .inline-form input:focus{border-color:var(--admin-ring);box-shadow:0 0 0 2px rgba(59,130,246,0.2)}
     .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
-    .field{padding:16px 20px;border-bottom:1px solid #f0f0f0}
-    .field:nth-child(odd){border-right:1px solid #f0f0f0}
-    .field label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#737373;margin-bottom:6px}
-    .field input,.field select{width:100%;font-family:'Inter',sans-serif;border:1px solid #d4d4d4;padding:8px 12px;font-size:13px;border-radius:6px;outline:none;background:#fff}
-    .field input:focus,.field select:focus{border-color:#111;box-shadow:0 0 0 1px #111}
-    .form-actions{padding:16px 20px;text-align:right;border-top:1px solid #e5e5e5}
-    .section-footer{padding:12px 20px;border-top:1px solid #e5e5e5;background:#fafafa}
-    .subsection{border-top:1px solid #e5e5e5}
-    .subsection h3{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding:12px 20px;background:#fafafa;border-bottom:1px solid #e5e5e5;color:#737373}
+    .field{padding:16px 20px;border-bottom:1px solid var(--admin-border)}
+    .field:nth-child(odd){border-right:1px solid var(--admin-border)}
+    .field label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--admin-muted-fg);margin-bottom:6px}
+    .field input,.field select{width:100%;font-family:var(--admin-font);border:1px solid var(--admin-border);padding:8px 12px;font-size:13px;border-radius:6px;outline:none;background:var(--admin-card);color:var(--admin-fg);height:40px}
+    .field input:focus,.field select:focus{border-color:var(--admin-ring);box-shadow:0 0 0 2px rgba(59,130,246,0.2)}
+    .form-actions{padding:16px 20px;text-align:right;border-top:1px solid var(--admin-border)}
+    .section-footer{padding:12px 20px;border-top:1px solid var(--admin-border);background:var(--admin-muted)}
+    .subsection{border-top:1px solid var(--admin-border)}
+    .subsection h3{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding:12px 20px;background:var(--admin-muted);border-bottom:1px solid var(--admin-border);color:var(--admin-muted-fg)}
 
     /* Today's Edition */
-    .edition-hero{border:1px solid #e5e5e5;border-radius:8px;margin-bottom:20px;overflow:hidden}
-    .edition-header{padding:20px;background:#fafafa;border-bottom:1px solid #e5e5e5}
-    .edition-topic{font-size:18px;font-weight:700;margin-bottom:4px}
-    .edition-meta{font-size:12px;color:#737373}
+    .edition-hero{background:var(--admin-card);border:1px solid var(--admin-border);border-radius:var(--admin-radius);box-shadow:var(--admin-shadow);margin-bottom:20px;overflow:hidden}
+    .edition-header{padding:20px;background:var(--admin-muted);border-bottom:1px solid var(--admin-border)}
+    .edition-topic{font-size:18px;font-weight:700;margin-bottom:4px;color:var(--admin-fg)}
+    .edition-meta{font-size:12px;color:var(--admin-muted-fg)}
     .edition-body{padding:16px 20px}
     .exercise-cards{display:flex;flex-direction:column;gap:8px}
-    .exercise-card{border:1px solid #e5e5e5;border-radius:6px;overflow:hidden}
+    .exercise-card{border:1px solid var(--admin-border);border-radius:6px;overflow:hidden;background:var(--admin-card)}
     .exercise-card-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;user-select:none}
-    .exercise-card-header:hover{background:#fafafa}
-    .exercise-type-badge{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding:2px 8px;border-radius:4px;background:#f0f0ff;color:#4338ca}
-    .exercise-card-title{font-size:13px;font-weight:500;flex:1;margin:0 12px}
-    .exercise-card-toggle{color:#999;font-size:12px}
-    .exercise-card-preview{padding:12px 16px;border-top:1px solid #f0f0f0;font-size:13px;line-height:1.6;display:none;background:#fcfcfc}
+    .exercise-card-header:hover{background:var(--admin-muted)}
+    .exercise-type-badge{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding:2px 10px;border-radius:9999px;background:var(--admin-muted);color:var(--admin-muted-fg)}
+    .exercise-card-title{font-size:13px;font-weight:500;flex:1;margin:0 12px;color:var(--admin-fg)}
+    .exercise-card-toggle{color:var(--admin-muted-fg);font-size:12px}
+    .exercise-card-preview{padding:12px 16px;border-top:1px solid var(--admin-border);font-size:13px;line-height:1.6;display:none;background:var(--admin-muted);color:var(--admin-fg)}
     .exercise-card-preview.open{display:block}
-    .exercise-card-actions{padding:8px 16px;border-top:1px solid #f0f0f0;display:none;background:#fafafa}
+    .exercise-card-actions{padding:8px 16px;border-top:1px solid var(--admin-border);display:none;background:var(--admin-muted)}
     .exercise-card-actions.open{display:flex;gap:8px}
-    .edition-actions{display:flex;gap:8px;padding:16px 20px;border-top:1px solid #e5e5e5;flex-wrap:wrap}
+    .edition-actions{display:flex;gap:8px;padding:16px 20px;border-top:1px solid var(--admin-border);flex-wrap:wrap}
 
     /* No board state */
     .no-board{padding:48px 20px;text-align:center}
-    .no-board p{color:#737373;margin-bottom:16px}
+    .no-board p{color:var(--admin-muted-fg);margin-bottom:16px}
     .generate-form{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap}
-    .generate-form select{font-family:'Inter',sans-serif;border:1px solid #d4d4d4;padding:8px 12px;font-size:13px;border-radius:6px;outline:none}
+    .generate-form select{font-family:var(--admin-font);border:1px solid var(--admin-border);padding:8px 12px;font-size:13px;border-radius:6px;outline:none;background:var(--admin-card);color:var(--admin-fg)}
 
     /* Empty state */
-    .empty-state{text-align:center;padding:32px;color:#999;font-style:italic}
+    .empty-state{text-align:center;padding:32px;color:var(--admin-muted-fg);font-style:italic}
 
     /* Toast */
-    .toast{position:fixed;top:64px;right:16px;background:#111;color:#fff;padding:12px 20px;border-radius:6px;font-size:13px;font-weight:500;z-index:100;display:none;animation:fadeIn .3s}
+    .toast{position:fixed;top:64px;right:16px;background:var(--admin-primary);color:var(--admin-primary-fg);padding:12px 20px;border-radius:6px;font-size:13px;font-weight:500;z-index:100;display:none;animation:fadeIn .3s}
     @keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 
     /* Mobile overlay */
@@ -471,6 +517,10 @@ export function renderAdminDashboard(data: AdminData): string {
   </style>
 </head>
 <body>
+  <script>
+    // Apply saved theme immediately to prevent flash
+    (function(){var t=localStorage.getItem('admin-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');else if(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.setAttribute('data-theme','dark');})();
+  </script>
   <div class="layout">
     <!-- Topbar -->
     <div class="topbar">
@@ -478,11 +528,17 @@ export function renderAdminDashboard(data: AdminData): string {
         <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
         </button>
-        <h1>IELTS Daily</h1>
+        <h1>IELTS Daily Admin</h1>
       </div>
       <div class="topbar-right">
         <span class="topbar-date">${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</span>
-        <span class="topbar-admin">Admin</span>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <svg class="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg class="theme-icon-dark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </button>
+        <form method="POST" action="/admin/logout" style="margin:0">
+          <button type="submit" class="logout-btn">Logout</button>
+        </form>
       </div>
     </div>
 
@@ -562,17 +618,37 @@ export function renderAdminDashboard(data: AdminData): string {
   <div class="toast" id="toast"></div>
 
   <script>
+    // Dark mode toggle
+    function toggleTheme() {
+      var html = document.documentElement;
+      var isDark = html.getAttribute('data-theme') === 'dark';
+      if (isDark) {
+        html.removeAttribute('data-theme');
+        localStorage.setItem('admin-theme', 'light');
+      } else {
+        html.setAttribute('data-theme', 'dark');
+        localStorage.setItem('admin-theme', 'dark');
+      }
+      updateThemeIcons();
+    }
+    function updateThemeIcons() {
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      var lightIcon = document.querySelector('.theme-icon-light');
+      var darkIcon = document.querySelector('.theme-icon-dark');
+      if (lightIcon) lightIcon.style.display = isDark ? 'none' : 'block';
+      if (darkIcon) darkIcon.style.display = isDark ? 'block' : 'none';
+    }
+    updateThemeIcons();
+
     // Action dropdown toggle
     function toggleDropdown(e) {
       e.stopPropagation();
       var menu = e.currentTarget.nextElementSibling;
-      // Close all other open dropdowns first
       document.querySelectorAll('.action-dropdown-menu.open').forEach(function(m) {
         if (m !== menu) m.classList.remove('open');
       });
       menu.classList.toggle('open');
     }
-    // Close dropdowns on outside click
     document.addEventListener('click', function() {
       document.querySelectorAll('.action-dropdown-menu.open').forEach(function(m) {
         m.classList.remove('open');
@@ -587,7 +663,6 @@ export function renderAdminDashboard(data: AdminData): string {
       var navBtn = document.querySelector('.nav-item[data-section="' + id + '"]');
       if (section) section.classList.add('active');
       if (navBtn) navBtn.classList.add('active');
-      // Close mobile sidebar
       var sidebar = document.getElementById('sidebar');
       var overlay = document.getElementById('sidebarOverlay');
       if (sidebar) sidebar.classList.remove('open');
@@ -635,8 +710,8 @@ export function renderAdminDashboard(data: AdminData): string {
 
 function renderBoardExists(board: Board, exercises: Exercise[], emailSent: boolean, baseUrl: string): string {
   const statusBadge = emailSent
-    ? '<span class="status-badge status-success">Live</span>'
-    : '<span class="status-badge status-draft">Draft</span>';
+    ? '<span class="badge-pill badge-live">Live</span>'
+    : '<span class="badge-pill badge-draft">Draft</span>';
 
   const exerciseCards = exercises.map((ex) => {
     const typeLabel = EXERCISE_TYPE_LABELS[ex.type] || ex.type;
@@ -656,8 +731,6 @@ function renderBoardExists(board: Board, exercises: Exercise[], emailSent: boole
       </div>
     </div>`;
   }).join("");
-
-  const previewLink = `${esc(baseUrl)}/s/`;
 
   return `
   <div class="edition-hero">

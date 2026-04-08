@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-08
-**Tasks Completed:** 12 (V4-2 done)
-**Current Task:** V4-3
+**Tasks Completed:** 13 (V4-3 done)
+**Current Task:** V4-4
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,24 @@
 ---
 
 ## Session Log
+
+### 2026-04-08 — V4-3: Admin dashboard shadcn redesign + dark mode
+- Rewrote src/templates/admin.ts with shadcn design tokens as CSS custom properties
+- Light mode: --admin-bg:#ffffff, --admin-card:#ffffff, --admin-border:#e2e8f0, --admin-muted:#f1f5f9, --admin-fg:#0f172a, --admin-muted-fg:#64748b, --admin-primary:#18181b
+- Dark mode: --admin-bg:#09090b, --admin-card:#18181b, --admin-border:#27272a, --admin-muted:#27272a, --admin-fg:#fafafa, --admin-muted-fg:#a1a1aa, --admin-primary:#fafafa
+- Dark mode toggle button in header with sun/moon icons, swaps data-theme attribute on <html>
+- localStorage persistence for theme preference ('admin-theme'), respects prefers-color-scheme on first visit
+- Inline <script> at top of <body> applies theme before render to prevent flash
+- Added logout button (POST /admin/logout) in header topbar
+- Changed title from "IELTS Daily" to "IELTS Daily Admin"
+- All colors replaced with CSS variables: cards, tables, sidebar, badges, buttons, forms, dropdowns
+- Badges now use rounded-full pills (border-radius:9999px) with semantic colors: badge-success (green), badge-warning (yellow), badge-error (red), badge-live, badge-draft
+- Cards use var(--admin-shadow), var(--admin-radius), var(--admin-border)
+- Inputs use focus ring color var(--admin-ring) with blue glow
+- Files changed: src/templates/admin.ts
+- Build: passes with zero errors
+- Verified: login page renders, dashboard renders with shadcn tokens, no [object Object] or undefined
+---
 
 ### 2026-04-08 — V4-2: Admin login page
 - Created src/templates/admin-login.ts with shadcn-inspired card layout: centered card, white bg, subtle shadow, rounded 8px, max-width 400px
