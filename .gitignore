@@ -3,3 +3,9 @@ dist/
 .env
 .trigger/
 *.log
+data/
+*.db
+*.db-shm
+*.db-wal
+.playwright-mcp/
+.claude/attn_state.json
