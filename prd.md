@@ -11,11 +11,12 @@ Web app for daily IELTS reading practice. Students receive 5 AI-generated exerci
 - **Hosting**: Fly.io
 
 ## Current State
-V3 done with 3 rendering bugs + user feedback: shorter passages, easier vocabulary, line breaks in short reading, 2 new exercises (mini writing + word search). 10 new tasks.
+v4 feedback round: bug fixes, admin redesign, cron fix, word search hints, fill-the-gap typing UX, reading highlighter.
 
 ## Spec files to read
-- `specs/improvements-v3.md` — **primary reference for v3 dashboard redesign**
-- `specs/improvements-v2.md` — reference for exercise-level design decisions
+- `specs/improvements-v4.md` — **primary reference for v4 feedback fixes**
+- `specs/improvements-v3.md` — v3 dashboard redesign
+- `specs/improvements-v2.md` — exercise-level design decisions
 - `specs/design.md` — color palette, typography, tokens
 - `specs/exercise-*.md` — per-exercise content and UX rules
 - `specs/daily-flow.md` — overall navigation and state model
@@ -185,6 +186,135 @@ V3 done with 3 rendering bugs + user feedback: shorter passages, easier vocabula
       "Run npm run build — must pass with zero errors"
     ],
     "passes": true
+  },
+  {
+    "category": "bugfix",
+    "description": "V4-1: Topic queue — repopulate with 50+ diverse topics. The topic queue is nearly empty. In src/db.ts or content.ts, expand the seed topic list to 50+ topics spanning: science, nature, culture, history, technology, health, geography, food, sports, travel, art, music, environment, space, animals, psychology, economics, architecture, fashion, film. If the seed population logic only runs on empty table, also add a function to repopulate when queue has < 5 remaining topics.",
+    "steps": [
+      "Read specs/improvements-v4.md section 1",
+      "Read src/db.ts — find topic_queue seed population",
+      "Expand the topic seed list to 50+ diverse topics across at least 15 categories",
+      "Ensure repopulation: if topic_queue has < 5 unused topics, add more from the seed list (or generate via Claude)",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "feature",
+    "description": "V4-2: Admin login page — replace HTTP Basic Auth popup with a styled login page. Create src/templates/admin-login.ts with a shadcn-inspired card: centered, white bg, subtle shadow, rounded 8px, max-width 400px. Username + password inputs (40px height, rounded 6px, focus ring). Dark 'Iniciar sesión' button. On POST /admin/login validate against DASH_USER/DASH_PASS env vars, set admin_session cookie (HTTP-only, 24h). GET /admin without valid cookie → render login page. POST /admin/logout → clear cookie.",
+    "steps": [
+      "Read specs/improvements-v4.md section 2",
+      "Create src/templates/admin-login.ts with shadcn-style card layout",
+      "Inputs: Inter font, 40px height, 1px border #e2e8f0, rounded 6px, focus ring #3b82f6",
+      "Button: #18181b bg, white text, rounded 6px, full-width, hover #27272a",
+      "Update src/routes/admin.ts: remove HTTP Basic Auth middleware, add cookie-based session check",
+      "Add POST /admin/login: validate credentials, set admin_session cookie (httpOnly, 24h, sameSite Lax)",
+      "Add POST /admin/logout: clear cookie, redirect to /admin",
+      "GET /admin without valid cookie → render login page",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "feature",
+    "description": "V4-3: Admin dashboard — shadcn-style redesign with dark mode. Rewrite src/templates/admin.ts using shadcn design tokens from specs/improvements-v4.md section 3. Fixed sidebar (240px, muted bg), header bar with logout, card-based content sections. Dark mode toggle + CSS variables that swap. All admin components: cards with shadow+rounded, clean tables with hover, pill badges for status.",
+    "steps": [
+      "Read specs/improvements-v4.md sections 3 and 5",
+      "Rewrite src/templates/admin.ts with shadcn design tokens as CSS variables",
+      "Layout: fixed sidebar (240px) with nav items (Today/Users/Topics/Email/Settings), header bar with title + dark mode toggle + logout",
+      "Cards: white bg, 1px border var(--admin-border), rounded 8px, shadow, 24px padding",
+      "Tables: clean rows, muted header bg, hover highlight",
+      "Buttons: primary (dark), secondary (border-only), destructive (red)",
+      "Badges: rounded-full pills, green=live, yellow=draft, red=error",
+      "Dark mode: add toggle, CSS variables swap via data-theme attribute, localStorage persistence",
+      "MUST verify with agent-browser",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "bugfix",
+    "description": "V4-4: Cron schedule — change from 7:00 AM UTC to 00:00 CLT (04:00 UTC). In src/index.ts, update cron.schedule from '0 7 * * *' to '0 4 * * *'. Also ensure runDailyJob both generates the board AND sends the email automatically — no manual click needed.",
+    "steps": [
+      "Read specs/improvements-v4.md section 4",
+      "Read src/index.ts — find cron.schedule line",
+      "Change '0 7 * * *' to '0 4 * * *' (midnight CLT = 04:00 UTC)",
+      "Update console.log message to say '00:00 CLT (04:00 UTC)'",
+      "Verify runDailyJob() both generates the board AND sends email",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "bugfix",
+    "description": "V4-5: Dashboard image STILL broken — deep fix. FIX-1 was not resolved. Debug thoroughly: (1) query the DB to check what illustration field actually contains, (2) check if fetchTopicImage in content.ts returns a real URL, (3) check the <img> tag src in dashboard.ts, (4) test the Wikipedia API call manually, (5) add crossorigin='anonymous' to img, (6) add onerror fallback (CSS gradient with topic text). If Wikipedia images have issues, try fetching originalimage.source instead of thumbnail. MUST verify with agent-browser that image loads or fallback shows.",
+    "steps": [
+      "Read specs/improvements-v4.md section 6",
+      "Read src/services/content.ts — find fetchTopicImage, test the Wikipedia API URL manually with fetch/curl",
+      "Read src/templates/dashboard.ts — find the <img> tag, check src binding",
+      "Start local server, query a board to see what illustration field contains: is it valid JSON? does imageUrl have a value?",
+      "If URL is empty: fix fetchTopicImage to try multiple Wikipedia API approaches (summary → opensearch → featured image)",
+      "If URL exists but image doesn't load: add crossorigin='anonymous', try originalimage.source URL",
+      "Add onerror fallback on the <img>: on error, replace with a CSS gradient + topic name text overlay",
+      "MUST verify with agent-browser that either the image loads OR the fallback looks good",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "feature",
+    "description": "V4-6: Word search hints. Update src/templates/exercise-word-search.ts: (1) Show the 4 target words in a 'PALABRAS A BUSCAR' section below the grid by DEFAULT — the player knows WHAT to find but not WHERE. (2) Add a 'Pista' button per unfound word that highlights ONE cell in the grid where a letter of that word appears (soft yellow pulse animation).",
+    "steps": [
+      "Read specs/improvements-v4.md section 7",
+      "Read src/templates/exercise-word-search.ts",
+      "Add 'PALABRAS A BUSCAR' section below grid: list all 4 words (just the word text, no definitions yet)",
+      "When a word is found: cross it out in the list, show its definition + example",
+      "Add 'Pista' button next to each unfound word in the list",
+      "On hint click: pick a random cell from that word's grid positions, highlight it with yellow bg pulse animation (CSS keyframe 1s), mark hint as used for that word",
+      "Style: 'Pista' as small muted text button, changes to 'Usada' after click",
+      "MUST verify with agent-browser",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "feature",
+    "description": "V4-7: Fill the Gap — immersive typing UX. Rewrite src/templates/exercise-fill-gap.ts: instead of tap-chip interaction, display the paragraph with inline <input> fields where blanks are. User types the missing words. Inputs are styled to look like inline text (same font, no visible border, auto-width). Placeholder shows dashes matching word length. Word bank displayed below as READ-ONLY reference list (not tappable). Tab key moves between inputs.",
+    "steps": [
+      "Read specs/improvements-v4.md section 8",
+      "Read current src/templates/exercise-fill-gap.ts",
+      "Rewrite paragraph rendering: split text at blank markers, insert inline <input> elements",
+      "Input styling: Lora 400 17px (matching paragraph font), no border, bottom-border-only on focus, width = correct word length in ch units + 2ch padding",
+      "Placeholder: light gray dashes '_ _ _ _' matching character count of correct word",
+      "As user types: text appears in var(--fg) color over the ghost text",
+      "Word bank below: label 'BANCO DE PALABRAS (referencia)', show all 7 words as plain text (Inter 500, comma-separated, not clickable)",
+      "Tab key moves to next <input> (natural tab order)",
+      "Submit enabled when all inputs have text",
+      "Grading: compare each input value (trimmed, lowercased) against correct word",
+      "MUST verify with agent-browser",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "feature",
+    "description": "V4-8: Reading highlighter tool. Add text highlighting to long reading and short reading templates. User selects text in the passage → floating toolbar appears with 3 color buttons (yellow, green, pink). Clicking a color wraps the selection in a <mark> with that color. Clicking an existing highlight removes it. Vanilla JS, no persistence needed.",
+    "steps": [
+      "Read specs/improvements-v4.md section 9",
+      "Read src/templates/exercise-long-reading.ts and exercise-short-reading.ts",
+      "Add shared highlight JS code (can be inline in both templates or a shared function)",
+      "On mouseup/touchend in the passage area: check if window.getSelection() has a non-empty range",
+      "If selection exists: show floating toolbar positioned near the selection (absolute positioned div with 3 color buttons)",
+      "Color buttons: 3 small circles (20px, rounded-full) — yellow #FEF3C7, green #D1FAE5, pink #FCE7F3",
+      "On color click: wrap the selection range in a <mark> element with that background color, hide toolbar",
+      "On click outside toolbar or on deselection: hide toolbar",
+      "On click on existing <mark>: unwrap it (remove the mark, keep the text)",
+      "Toolbar style: pill shape, subtle shadow, 8px above selection, z-index above content",
+      "Only apply to passage text (not questions area)",
+      "MUST verify with agent-browser — check toolbar appears on text selection",
+      "Run npm run build — must pass with zero errors"
+    ],
+    "passes": false
   },
   {
     "category": "improvement",
