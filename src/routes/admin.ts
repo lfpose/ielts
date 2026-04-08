@@ -1,5 +1,7 @@
 import { Hono } from "hono";
-import { basicAuth } from "hono/basic-auth";
+import { getCookie, setCookie, deleteCookie } from "hono/cookie";
+import { randomBytes } from "crypto";
+import { renderAdminLogin } from "../templates/admin-login.js";
 import {
   getAllSettings,
   setSetting,
@@ -54,9 +56,59 @@ import {
 const DASH_USER = process.env.DASH_USER || "admin";
 const DASH_PASS = process.env.DASH_PASS || "ielts2024";
 
+// In-memory session store (single-process; resets on restart)
+const activeSessions = new Set<string>();
+
+function createAdminSession(): string {
+  const token = randomBytes(32).toString("hex");
+  activeSessions.add(token);
+  // Auto-expire after 24h
+  setTimeout(() => activeSessions.delete(token), 24 * 60 * 60 * 1000);
+  return token;
+}
+
 const app = new Hono();
 
-app.use("/*", basicAuth({ username: DASH_USER, password: DASH_PASS }));
+// Login page and auth endpoints (no auth required)
+app.post("/login", async (c) => {
+  const body = await c.req.parseBody();
+  const username = (body.username as string || "").trim();
+  const password = (body.password as string || "").trim();
+
+  if (username === DASH_USER && password === DASH_PASS) {
+    const token = createAdminSession();
+    setCookie(c, "admin_session", token, {
+      httpOnly: true,
+      sameSite: "Lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 24 * 60 * 60,
+      path: "/admin",
+    });
+    return c.redirect("/admin");
+  }
+
+  return c.html(renderAdminLogin("Usuario o contraseña incorrectos"));
+});
+
+app.post("/logout", (c) => {
+  const token = getCookie(c, "admin_session");
+  if (token) activeSessions.delete(token);
+  deleteCookie(c, "admin_session", { path: "/admin" });
+  return c.redirect("/admin");
+});
+
+// Auth middleware for all other admin routes
+app.use("/*", async (c, next) => {
+  // Skip middleware for login/logout (already handled above)
+  const path = c.req.path.replace(/^\/admin/, "");
+  if (path === "/login" || path === "/logout") return next();
+
+  const token = getCookie(c, "admin_session");
+  if (!token || !activeSessions.has(token)) {
+    return c.html(renderAdminLogin());
+  }
+  return next();
+});
 
 // =============================================
 // GET /admin — Dashboard

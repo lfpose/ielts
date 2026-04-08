@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-08
-**Tasks Completed:** 11 (V4-1 done)
-**Current Task:** V4-2
+**Tasks Completed:** 12 (V4-2 done)
+**Current Task:** V4-3
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,22 @@
 ---
 
 ## Session Log
+
+### 2026-04-08 — V4-2: Admin login page
+- Created src/templates/admin-login.ts with shadcn-inspired card layout: centered card, white bg, subtle shadow, rounded 8px, max-width 400px
+- Inputs: Inter font, 40px height, 1px border #e2e8f0, rounded 6px, focus ring #3b82f6
+- Button: #18181b bg, white text, rounded 6px, full-width, hover #27272a
+- Branding text "The IELTS Daily · Admin" above form
+- Error message display for invalid credentials
+- Updated src/routes/admin.ts: removed HTTP Basic Auth middleware (`basicAuth` import removed)
+- Added cookie-based session: POST /admin/login validates DASH_USER/DASH_PASS, sets `admin_session` cookie (httpOnly, 24h, sameSite Lax, path /admin)
+- POST /admin/logout clears cookie and redirects to /admin
+- GET /admin without valid cookie renders login page
+- In-memory session store with auto-expiry after 24h
+- Files changed: src/templates/admin-login.ts (new), src/routes/admin.ts
+- Build: passes with zero errors
+- Verified via curl: login page renders, correct credentials set cookie + redirect, wrong credentials show error, authenticated access returns dashboard, logout clears cookie
+---
 
 ### 2026-04-08 — V4-1: Topic queue repopulation
 - Expanded SEED_TOPICS from 20 to 68 topics across 20 categories (science, nature, culture, history, technology, health, geography, animals, space, psychology, economics, architecture, fashion, film/art, music, environment, sports, travel, food)
