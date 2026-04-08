@@ -82,6 +82,9 @@ export function renderWordSearch(
       word: w.word,
       definition: w.definition,
       example: w.example,
+      startRow: w.startRow,
+      startCol: w.startCol,
+      direction: w.direction,
     }))
   );
 
@@ -165,6 +168,28 @@ export function renderWordSearch(
     }
     .celebrate{animation:celebrate 400ms ease both}
 
+    /* PALABRAS A BUSCAR */
+    .word-list-section{margin-bottom:28px}
+    .word-list-label{font-family:'Inter',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:var(--accent-teal);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--muted)}
+    .word-list{display:flex;flex-direction:column;gap:8px}
+    .word-list-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:1px solid var(--muted);border-radius:4px;background:var(--bg);transition:all .3s}
+    .word-list-item.found-item{border-color:var(--correct);background:color-mix(in srgb, var(--correct) 6%, var(--bg))}
+    .word-list-item.found-item .wl-word{text-decoration:line-through;color:var(--correct)}
+    .wl-word{font-family:'Playfair Display',Georgia,serif;font-weight:700;font-size:15px;min-width:80px}
+    .wl-hint-btn{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--n500);background:none;border:1px solid var(--muted);border-radius:999px;padding:4px 12px;cursor:pointer;transition:all .15s;margin-left:auto;flex-shrink:0}
+    .wl-hint-btn:hover{color:var(--fg);border-color:var(--fg)}
+    .wl-hint-btn.used{color:var(--n500);border-color:transparent;cursor:default;opacity:.6}
+    .wl-detail{font-family:'Inter',sans-serif;font-size:12px;color:var(--n600);margin-top:4px;display:none}
+    .wl-detail.visible{display:block}
+    .wl-detail-def{margin-bottom:2px}
+    .wl-detail-ex{font-family:'Lora',Georgia,serif;font-style:italic;font-size:12px;color:var(--n500)}
+    @keyframes hintPulse{
+      0%{background:#FEF3C7;box-shadow:0 0 8px rgba(254,243,199,.8)}
+      50%{background:#FDE68A;box-shadow:0 0 16px rgba(253,230,138,.9)}
+      100%{background:#FEF3C7;box-shadow:0 0 8px rgba(254,243,199,.8)}
+    }
+    .grid-cell.hint-pulse{animation:hintPulse 1s ease-in-out 3;border-color:#856404;color:#856404}
+
     .footer{text-align:center;padding:32px 0 16px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--n500);text-transform:uppercase;letter-spacing:2px}
 
     @media(max-width:600px){
@@ -202,7 +227,27 @@ export function renderWordSearch(
 
     ${submission
       ? `<div class="word-bank-note">Palabras guardadas en tu banco</div>`
-      : `<div class="found-words-section" id="found-words-section" style="display:none">
+      : `<div class="word-list-section" id="word-list-section">
+          <div class="word-list-label">Palabras a buscar</div>
+          <div class="word-list" id="word-list">
+            ${content.words
+              .map(
+                (w, idx) =>
+                  `<div class="word-list-item" id="wl-item-${idx}" data-word-idx="${idx}">
+                    <div>
+                      <span class="wl-word">${esc(w.word.toUpperCase())}</span>
+                      <div class="wl-detail" id="wl-detail-${idx}">
+                        <div class="wl-detail-def">${esc(w.definition)}</div>
+                        <div class="wl-detail-ex">&ldquo;${esc(w.example)}&rdquo;</div>
+                      </div>
+                    </div>
+                    <button class="wl-hint-btn" id="wl-hint-${idx}" data-word-idx="${idx}" type="button">Pista</button>
+                  </div>`
+              )
+              .join("")}
+          </div>
+        </div>
+        <div class="found-words-section" id="found-words-section" style="display:none">
           <div class="found-words-label">Palabras encontradas</div>
           <div class="found-words" id="found-words"></div>
         </div>`
@@ -327,37 +372,31 @@ export function renderWordSearch(
 
   function addFoundCard(wordObj, colorIdx) {
     var color = COLORS[colorIdx];
-    var section = document.getElementById('found-words-section');
-    var container = document.getElementById('found-words');
-    if (!section || !container) return;
-    section.style.display = '';
-
-    var card = document.createElement('div');
-    card.className = 'found-word-card';
-    card.style.cssText = 'border-left:4px solid ' + color.border + ';background:' + color.bg + ';border-radius:4px;padding:12px 16px;animation:slideIn 300ms ease-out both';
-
-    var wordEl = document.createElement('div');
-    wordEl.className = 'fw-word';
-    wordEl.textContent = wordObj.word.toUpperCase();
-
-    var defEl = document.createElement('div');
-    defEl.className = 'fw-def';
-    defEl.textContent = wordObj.definition;
-
-    var exEl = document.createElement('div');
-    exEl.className = 'fw-ex';
-    exEl.textContent = '\u201c' + wordObj.example + '\u201d';
-
-    card.appendChild(wordEl);
-    card.appendChild(defEl);
-    card.appendChild(exEl);
-    container.appendChild(card);
-
-    // Brief celebrate animation on card
-    setTimeout(function() {
-      card.classList.add('celebrate');
-      setTimeout(function() { card.classList.remove('celebrate'); }, 500);
-    }, 50);
+    // Update the word list item
+    var wordIdx = -1;
+    for (var wi = 0; wi < WORDS.length; wi++) {
+      if (WORDS[wi].word === wordObj.word) { wordIdx = wi; break; }
+    }
+    if (wordIdx >= 0) {
+      var item = document.getElementById('wl-item-' + wordIdx);
+      if (item) {
+        item.classList.add('found-item');
+        item.style.borderColor = color.border;
+        item.style.background = color.bg;
+      }
+      var detail = document.getElementById('wl-detail-' + wordIdx);
+      if (detail) detail.classList.add('visible');
+      var hintBtn = document.getElementById('wl-hint-' + wordIdx);
+      if (hintBtn) hintBtn.style.display = 'none';
+      // Clear any hint pulse on this word's cells
+      var letters = wordObj.word.toLowerCase().replace(/[^a-z]/g, '');
+      for (var li = 0; li < letters.length; li++) {
+        var hr = wordObj.direction === 'horizontal' ? wordObj.startRow : wordObj.startRow + li;
+        var hc = wordObj.direction === 'horizontal' ? wordObj.startCol + li : wordObj.startCol;
+        var hCell = getCell(hr, hc);
+        if (hCell) hCell.classList.remove('hint-pulse');
+      }
+    }
   }
 
   function updateCounter() {
@@ -376,6 +415,33 @@ export function renderWordSearch(
     .then(function() { window.location.reload(); })
     .catch(function(err) { console.error('Submit failed:', err); });
   }
+
+  // Hint buttons
+  document.querySelectorAll('.wl-hint-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (this.classList.contains('used')) return;
+      var idx = parseInt(this.getAttribute('data-word-idx'), 10);
+      var w = WORDS[idx];
+      if (foundWords.indexOf(w.word) !== -1) return;
+      var letters = w.word.toLowerCase().replace(/[^a-z]/g, '');
+      // Collect cells for this word that are not already found or hint-pulsed
+      var candidates = [];
+      for (var li = 0; li < letters.length; li++) {
+        var hr = w.direction === 'horizontal' ? w.startRow : w.startRow + li;
+        var hc = w.direction === 'horizontal' ? w.startCol + li : w.startCol;
+        var hCell = getCell(hr, hc);
+        if (hCell && !hCell.classList.contains('found') && !hCell.classList.contains('hint-pulse')) {
+          candidates.push(hCell);
+        }
+      }
+      if (candidates.length === 0) return;
+      var pick = candidates[Math.floor(Math.random() * candidates.length)];
+      pick.classList.add('hint-pulse');
+      this.textContent = 'Usada';
+      this.classList.add('used');
+    });
+  });
 
   document.querySelectorAll('.grid-cell').forEach(function(el) {
     el.addEventListener('click', function() {

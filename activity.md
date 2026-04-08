@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-08
-**Tasks Completed:** 15 (V4-5 done)
-**Current Task:** V4-6
+**Tasks Completed:** 16 (V4-6 done)
+**Current Task:** V4-7
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,17 @@
 ---
 
 ## Session Log
+
+### 2026-04-08 — V4-6: Word search hints
+- Added "PALABRAS A BUSCAR" section below the grid listing all 4 target words (word text only, no positions)
+- Added "Pista" button per unfound word: on click, highlights one random cell from that word's grid position with yellow pulse animation (CSS hintPulse keyframe, 3 cycles)
+- Button changes to "Usada" after click and becomes disabled
+- When a word is found: word gets line-through + green tint, definition + example revealed below, hint button hidden, hint pulse cleared from cells
+- Added position data (startRow, startCol, direction) to JS word data for hint functionality
+- New CSS: .word-list-section, .word-list-item, .wl-hint-btn, .hint-pulse animation, found-item state
+- Files changed: src/templates/exercise-word-search.ts
+- Build: passes with zero errors
+---
 
 ### 2026-04-08 — V4-5: Dashboard image deep fix
 - Updated fetchTopicImage() in content.ts to prefer `originalimage.source` (full-size Wikipedia image) over `thumbnail.source` — larger images are more reliably available
