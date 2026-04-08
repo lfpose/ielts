@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-04-08
-**Tasks Completed:** 13 (V4-3 done)
-**Current Task:** V4-4
+**Tasks Completed:** 14 (V4-4 done)
+**Current Task:** V4-5
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,14 @@
 ---
 
 ## Session Log
+
+### 2026-04-08 — V4-4: Cron schedule change to midnight CLT
+- Changed cron.schedule from '0 7 * * *' to '0 4 * * *' (00:00 CLT = 04:00 UTC)
+- Updated console.log message to reflect new schedule
+- Verified runDailyJob() already generates the board AND sends email automatically (steps 1-6 in function)
+- Files changed: src/index.ts
+- Build: passes with zero errors
+---
 
 ### 2026-04-08 — V4-3: Admin dashboard shadcn redesign + dark mode
 - Rewrote src/templates/admin.ts with shadcn design tokens as CSS custom properties

@@ -109,8 +109,8 @@ export async function runDailyJob() {
   console.log(`[${new Date().toISOString()}] Daily job completed for ${today}.`);
 }
 
-cron.schedule("0 7 * * *", runDailyJob);
-console.log("IELTS Daily scheduler started. Cron: 7:00 AM UTC.");
+cron.schedule("0 4 * * *", runDailyJob);
+console.log("IELTS Daily scheduler started. Cron: 00:00 CLT (04:00 UTC).");
 
 const app = new Hono();
 

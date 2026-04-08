@@ -243,7 +243,7 @@ v4 feedback round: bug fixes, admin redesign, cron fix, word search hints, fill-
       "Verify runDailyJob() both generates the board AND sends email",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "bugfix",
