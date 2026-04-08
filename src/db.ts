@@ -133,28 +133,94 @@ try {
   db.exec("ALTER TABLE boards ADD COLUMN illustration TEXT");
 }
 
-// --- Pre-populate topic_queue with 20 topics from specs/content-pipeline.md ---
-const INITIAL_TOPICS = [
-  "Dinosaurs and prehistoric life",
-  "The Great Barrier Reef",
+// --- Pre-populate topic_queue with 60 topics across 20 categories ---
+const SEED_TOPICS = [
+  // Science
   "How volcanoes work",
-  "The history of chocolate",
-  "Antarctica and its wildlife",
-  "How the human brain learns",
-  "The Amazon rainforest",
-  "Ancient Egypt and the pyramids",
-  "The water cycle and weather patterns",
-  "Octopuses and marine intelligence",
-  "The solar system and planets",
-  "How bridges are built",
-  "Migration patterns of birds",
-  "The invention of the printing press",
-  "Coral reefs and ocean ecosystems",
-  "Traditional foods around the world",
   "The science of sleep",
-  "Mountains: how they form and erode",
+  "How the human brain learns",
+  "The water cycle and weather patterns",
+  "How vaccines protect the body",
+  // Nature
+  "The Great Barrier Reef",
+  "The Amazon rainforest",
+  "Coral reefs and ocean ecosystems",
   "Bees and pollination",
+  "Migration patterns of birds",
+  // Culture
+  "Traditional foods around the world",
+  "The history of chocolate",
+  "Festivals and celebrations worldwide",
+  "The origins of language and writing",
+  "Indigenous cultures and their knowledge",
+  // History
+  "Ancient Egypt and the pyramids",
+  "The invention of the printing press",
   "The history of maps and navigation",
+  "The Silk Road and ancient trade routes",
+  "The Industrial Revolution and its impact",
+  // Technology
+  "How bridges are built",
+  "The evolution of the internet",
+  "Renewable energy and solar power",
+  "Artificial intelligence in everyday life",
+  "The history of space exploration",
+  // Health
+  "Nutrition and balanced diets",
+  "The importance of mental health",
+  "How exercise affects the brain",
+  "Clean water access around the world",
+  "Traditional medicine across cultures",
+  // Geography
+  "Antarctica and its wildlife",
+  "Mountains: how they form and erode",
+  "Deserts and how life adapts to them",
+  "Rivers and their role in civilization",
+  "Islands and unique ecosystems",
+  // Animals
+  "Dinosaurs and prehistoric life",
+  "Octopuses and marine intelligence",
+  "Endangered species and conservation",
+  "How animals communicate",
+  "Deep sea creatures and ocean exploration",
+  // Space
+  "The solar system and planets",
+  "Black holes and the mysteries of space",
+  "The search for life on Mars",
+  // Psychology
+  "How memory works",
+  "The psychology of decision making",
+  "Why humans dream",
+  // Economics
+  "Global trade and supply chains",
+  "The history of money and banking",
+  "Microfinance and its impact on communities",
+  // Architecture
+  "Famous buildings and their stories",
+  "Sustainable architecture and green cities",
+  // Fashion
+  "The history of clothing and textiles",
+  "Fast fashion and the environment",
+  // Film & Art
+  "The history of cinema",
+  "Street art and public murals",
+  "Photography and how it changed the world",
+  // Music
+  "The science of music and the brain",
+  "Musical instruments from around the world",
+  // Environment
+  "Climate change and its effects",
+  "Plastic pollution in the oceans",
+  "Deforestation and reforestation efforts",
+  // Sports
+  "The history of the Olympic Games",
+  "How sports bring communities together",
+  // Travel
+  "UNESCO World Heritage Sites",
+  "The impact of tourism on local cultures",
+  // Food
+  "The science of cooking and flavors",
+  "Urban farming and food sustainability",
 ];
 
 const topicCount = (db.prepare("SELECT COUNT(*) as count FROM topic_queue").get() as { count: number }).count;
@@ -165,7 +231,34 @@ if (topicCount === 0) {
       insertTopic.run(topics[i], i + 1);
     }
   });
-  insertMany(INITIAL_TOPICS);
+  insertMany(SEED_TOPICS);
+}
+
+// --- Repopulate topic_queue when running low on unused topics ---
+export function repopulateTopicsIfNeeded(): void {
+  const unusedCount = (db.prepare(
+    "SELECT COUNT(*) as count FROM topic_queue WHERE last_used_on IS NULL"
+  ).get() as { count: number }).count;
+
+  if (unusedCount >= 5) return;
+
+  // Find which seed topics are not already in the queue
+  const existing = new Set(
+    (db.prepare("SELECT topic FROM topic_queue").all() as { topic: string }[]).map(r => r.topic)
+  );
+  const missing = SEED_TOPICS.filter(t => !existing.has(t));
+
+  if (missing.length > 0) {
+    const maxPos = (db.prepare("SELECT MAX(position) as max FROM topic_queue").get() as { max: number | null }).max ?? 0;
+    const insertTopic = db.prepare("INSERT OR IGNORE INTO topic_queue (topic, position) VALUES (?, ?)");
+    const insertMany = db.transaction((topics: string[]) => {
+      for (let i = 0; i < topics.length; i++) {
+        insertTopic.run(topics[i], maxPos + i + 1);
+      }
+    });
+    insertMany(missing);
+    console.log(`Repopulated topic queue with ${missing.length} topics.`);
+  }
 }
 
 // --- Pre-populate word_bank_seed from src/word-bank-seed.ts ---

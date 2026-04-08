@@ -197,7 +197,7 @@ v4 feedback round: bug fixes, admin redesign, cron fix, word search hints, fill-
       "Ensure repopulation: if topic_queue has < 5 unused topics, add more from the seed list (or generate via Claude)",
       "Run npm run build — must pass with zero errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",

@@ -1,9 +1,9 @@
 # IELTS Daily - Activity Log
 
 ## Current Status
-**Last Updated:** 2026-04-07
-**Tasks Completed:** 10 of 10 (FIX-1, FIX-2, FIX-3, FIX-4, NEW-1, NEW-2, NEW-3, NEW-4, NEW-5, NEW-6 done)
-**Current Task:** All tasks complete
+**Last Updated:** 2026-04-08
+**Tasks Completed:** 11 (V4-1 done)
+**Current Task:** V4-2
 
 ### Previously completed (before ralph loop)
 - P0-1: Database Schema Migration ✓
@@ -19,6 +19,14 @@
 ---
 
 ## Session Log
+
+### 2026-04-08 — V4-1: Topic queue repopulation
+- Expanded SEED_TOPICS from 20 to 68 topics across 20 categories (science, nature, culture, history, technology, health, geography, animals, space, psychology, economics, architecture, fashion, film/art, music, environment, sports, travel, food)
+- Added `repopulateTopicsIfNeeded()` function: checks unused topic count, if < 5 adds missing seed topics to queue
+- Called repopulation in `runDailyJob()` before topic selection
+- Files changed: src/db.ts, src/index.ts, prd.md, activity.md
+- Build: passes with zero errors
+---
 
 ### 2026-04-07 — NEW-6: Dashboard + routes update for 7 exercises
 - Added `--accent-teal:#1a3a3a` CSS variable (and dark mode variant `#55aaaa`) for word_search

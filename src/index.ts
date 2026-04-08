@@ -10,6 +10,7 @@ import {
   logEmail,
   getSetting,
   getAllUsers,
+  repopulateTopicsIfNeeded,
 } from "./db.js";
 import { pickTopic, generateBoard } from "./services/content.js";
 import { sendInviteEmail } from "./services/email.js";
@@ -30,7 +31,8 @@ export async function runDailyJob() {
     return;
   }
 
-  // 2. Pick topic
+  // 2. Repopulate topic queue if running low, then pick topic
+  repopulateTopicsIfNeeded();
   const { topic } = pickTopic();
   console.log(`Selected topic: "${topic}"`);
 
