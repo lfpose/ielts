@@ -15,6 +15,7 @@ import {
   getTotalSubmissions,
   getTotalBoardsCompleted,
   getRecentSubmissionsWithType,
+  registerGuestUser,
   type User,
   type ExerciseType,
 } from "../db.js";
@@ -326,10 +327,14 @@ app.post("/:token/exercise/:exerciseId", async (c) => {
       }
     }
 
+    // Check if guest just completed their first exercise
+    const showEmailPrompt = user.is_guest === 1 && getTotalSubmissions(user.id) === 1;
+
     return c.json({
       score: gradeResult.score,
       maxScore: exercise.max_score,
       feedback: gradeResult.feedback,
+      ...(showEmailPrompt ? { showEmailPrompt: true } : {}),
     });
   } catch (err: any) {
     console.error(JSON.stringify({
@@ -340,6 +345,26 @@ app.post("/:token/exercise/:exerciseId", async (c) => {
       stack: err.stack,
     }));
     return c.json({ error: "Submission failed. Please try again." }, 500);
+  }
+});
+
+// POST /:token/register — register a guest user with email
+app.post("/:token/register", async (c) => {
+  const user = resolveUser(c.req.param("token"));
+  if (!user) return c.json({ error: "Invalid link." }, 404);
+  if (!user.is_guest) return c.json({ ok: true }); // already registered
+
+  try {
+    const body = await c.req.json();
+    const email = (typeof body.email === "string" ? body.email : "").trim().toLowerCase();
+    if (!email || !email.includes("@")) return c.json({ error: "Correo inválido." }, 400);
+
+    const name = (typeof body.name === "string" ? body.name : "").trim() || email.split("@")[0];
+    const updated = registerGuestUser(user.token, email, name);
+    if (!updated) return c.json({ error: "Este correo ya está en uso." }, 409);
+    return c.json({ ok: true });
+  } catch {
+    return c.json({ error: "Error al registrar." }, 500);
   }
 });
 

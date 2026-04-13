@@ -68,6 +68,30 @@ function renderExercisePreview(exercise: Exercise): string {
   } else if (type === "writing_micro") {
     const prompt = content.prompt || "";
     preview = `<strong>Prompt:</strong> ${esc(prompt)}`;
+  } else if (type === "word_search") {
+    const grid = (content.grid || []) as string[][];
+    const words = (content.words || []) as Array<{ word: string; startRow: number; startCol: number; direction: string }>;
+    const WORD_COLORS = ["#E8F4E8", "#E8F0F8", "#F8F0E8", "#F0E8F8"];
+    const BORDER_COLORS = ["#2D6A4F", "#1a4a7a", "#7a4a1a", "#4a1a7a"];
+    const cellHighlight: Record<string, string> = {};
+    words.forEach((w, i) => {
+      const letters = w.word.toLowerCase().replace(/[^a-z]/g, "");
+      for (let j = 0; j < letters.length; j++) {
+        const r = w.direction === "horizontal" ? w.startRow : w.startRow + j;
+        const c = w.direction === "horizontal" ? w.startCol + j : w.startCol;
+        cellHighlight[`${r},${c}`] = WORD_COLORS[i % WORD_COLORS.length];
+      }
+    });
+    const gridRows = grid.map((row, ri) =>
+      `<tr>${row.map((cell, ci) => {
+        const bg = cellHighlight[`${ri},${ci}`];
+        return `<td style="width:18px;height:18px;text-align:center;font-size:10px;font-family:'JetBrains Mono',monospace;padding:0;border:1px solid #e2e8f0;${bg ? `background:${bg}` : ""}">${esc(cell.toUpperCase())}</td>`;
+      }).join("")}</tr>`
+    ).join("");
+    const wordTags = words.map((w, i) =>
+      `<span style="background:${WORD_COLORS[i % WORD_COLORS.length]};border:1px solid ${BORDER_COLORS[i % BORDER_COLORS.length]};font-size:11px;font-weight:600;padding:1px 8px;border-radius:4px;margin-right:4px">${esc(w.word.toUpperCase())}</span>`
+    ).join("");
+    preview = `<table style="border-collapse:collapse;margin-bottom:8px">${gridRows}</table><div>${wordTags}</div>`;
   }
 
   return preview;
@@ -127,17 +151,18 @@ export function renderAdminDashboard(data: AdminData): string {
     const streakDisplay = u.streak > 0 ? `<span class="streak-badge">${u.streak}d</span>` : `<span class="text-muted">0</span>`;
     const lastActive = u.lastActive || "Never";
     const completedDisplay = u.totalToday > 0 ? `${u.completedToday}/${u.totalToday}` : "&mdash;";
-    return `<tr>
+    return `<tr onclick="window.location='/admin/users/${u.id}/detail'" style="cursor:pointer">
       <td>${esc(u.name)}</td>
       <td class="mono">${esc(u.email)}</td>
       <td>${streakDisplay}</td>
       <td>${esc(lastActive)}</td>
       <td class="mono">${completedDisplay}</td>
       <td class="mono">${u.totalExercises}</td>
-      <td>
+      <td onclick="event.stopPropagation()">
         <div class="action-dropdown">
           <button class="action-dropdown-btn" onclick="toggleDropdown(event)">Actions <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
           <div class="action-dropdown-menu">
+            <a href="/admin/users/${u.id}/detail" class="action-dropdown-item">Ver detalle &rarr;</a>
             <a href="${esc(baseUrl)}/s/${esc(u.token)}" target="_blank" class="action-dropdown-item">View Dashboard</a>
             <div class="action-dropdown-divider"></div>
             <form method="POST" action="/admin/users/${u.id}/remove" onsubmit="return confirm('Remove ${esc(u.name)}?')">
@@ -778,4 +803,159 @@ function renderNoBoard(topics: AdminData["topics"]): string {
       </div>
     </div>
   </div>`;
+}
+
+export interface UserDetailData {
+  user: { id: number; name: string; email: string; token: string; created_at: string; is_guest: number };
+  streak: number;
+  longestStreak: number;
+  totalExercises: number;
+  totalBoards: number;
+  wordBankSize: number;
+  lastActive: string | null;
+  recentSubmissions: Array<{ date: string; exercise_type: string; score: number | null; max_score: number; feedback?: string }>;
+  activityData: Array<{ date: string; submitted: boolean; score: number | null }>;
+  wordBank: Array<{ word: string; difficulty?: string }>;
+}
+
+export function renderUserDetail(d: UserDetailData): string {
+  const EXERCISE_LABELS: Record<string, string> = {
+    long_reading: "Long Reading", short_reading: "Short Reading", vocabulary: "Vocabulary",
+    fill_gap: "Fill Gap", writing_micro: "Writing Micro", mini_writing: "Mini Writing", word_search: "Word Search",
+  };
+
+  // 16-week activity heatmap (112 days)
+  const today = new Date();
+  const dayMs = 86400000;
+  const actMap: Record<string, boolean> = {};
+  for (const a of d.activityData) actMap[a.date] = a.submitted;
+
+  const weeks: string[][] = [];
+  // Start from 112 days ago (Sunday aligned)
+  const startDate = new Date(today.getTime() - 111 * dayMs);
+  startDate.setDate(startDate.getDate() - startDate.getDay()); // align to Sunday
+
+  let week: string[] = [];
+  for (let i = 0; i < 16 * 7; i++) {
+    const d2 = new Date(startDate.getTime() + i * dayMs);
+    const ds = d2.toISOString().slice(0, 10);
+    week.push(ds);
+    if (week.length === 7) { weeks.push(week); week = []; }
+  }
+
+  const heatmapCells = weeks.map(w =>
+    `<div style="display:flex;flex-direction:column;gap:2px">${w.map(ds => {
+      const active = actMap[ds];
+      const future = ds > today.toISOString().slice(0, 10);
+      const bg = future ? "transparent" : active ? "#2D6A4F" : "#e2e8f0";
+      return `<div title="${ds}" style="width:10px;height:10px;border-radius:2px;background:${bg}"></div>`;
+    }).join("")}</div>`
+  ).join("");
+
+  const submissionRows = d.recentSubmissions.map((s, i) =>
+    `<tr>
+      <td class="mono" style="font-size:11px">${esc(s.date)}</td>
+      <td><span style="background:#f1f5f9;padding:2px 8px;border-radius:4px;font-size:11px">${esc(EXERCISE_LABELS[s.exercise_type] || s.exercise_type)}</span></td>
+      <td class="mono">${s.score ?? "&mdash;"}/${s.max_score}</td>
+      <td>
+        ${s.feedback ? `<details><summary style="cursor:pointer;font-size:11px;color:#64748b">Ver feedback</summary><pre style="font-size:10px;white-space:pre-wrap;margin-top:4px;color:#64748b;max-height:100px;overflow:auto">${esc(s.feedback.slice(0, 400))}</pre></details>` : "&mdash;"}
+      </td>
+    </tr>`
+  ).join("");
+
+  const wordBankRows = d.wordBank.slice(0, 20).map(w =>
+    `<span style="display:inline-block;background:#f1f5f9;padding:2px 10px;border-radius:9999px;font-size:12px;margin:2px">${esc(w.word)}</span>`
+  ).join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${esc(d.user.name)} — Admin Detail</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#fff;--fg:#0f172a;--border:#e2e8f0;--muted:#f1f5f9;--muted-fg:#64748b;--success:#16a34a}
+    [data-theme="dark"]{--bg:#09090b;--fg:#fafafa;--border:#27272a;--muted:#18181b;--muted-fg:#a1a1aa;--success:#22c55e}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--fg);font-size:14px;line-height:1.5}
+    .topbar{display:flex;align-items:center;gap:12px;padding:0 24px;height:52px;border-bottom:1px solid var(--border);background:var(--muted);position:sticky;top:0;z-index:50}
+    .topbar a{font-size:13px;color:var(--muted-fg);text-decoration:none;font-weight:500}
+    .topbar a:hover{color:var(--fg)}
+    .topbar-title{font-size:15px;font-weight:700;margin-left:8px}
+    .shell{max-width:900px;margin:0 auto;padding:32px 24px}
+    .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted-fg);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+    .card{background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:24px;overflow:hidden}
+    .card-header{padding:14px 20px;border-bottom:1px solid var(--border);background:var(--muted);font-size:13px;font-weight:700}
+    .card-body{padding:20px}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:0}
+    .stat-card{border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center}
+    .stat-val{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:var(--fg)}
+    .stat-lbl{font-size:11px;color:var(--muted-fg);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+    table{width:100%;border-collapse:collapse}
+    th{text-align:left;padding:8px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted-fg);border-bottom:1px solid var(--border);background:var(--muted)}
+    td{padding:8px 12px;font-size:13px;border-bottom:1px solid var(--border);color:var(--fg)}
+    tr:last-child td{border-bottom:none}
+    .mono{font-family:'JetBrains Mono',monospace;font-size:12px}
+  </style>
+  <script>(function(){var t=localStorage.getItem('admin-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
+</head>
+<body>
+  <div class="topbar">
+    <a href="/admin">&larr; Admin</a>
+    <span class="topbar-title">${esc(d.user.name)}</span>
+    <span style="margin-left:auto;font-size:12px;color:var(--muted-fg)">${esc(d.user.email)}</span>
+  </div>
+  <div class="shell">
+
+    <div class="stats-grid" style="margin-bottom:24px">
+      <div class="stat-card">
+        <div class="stat-val">${d.streak}</div>
+        <div class="stat-lbl">&#x1F525; Racha actual</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">${d.longestStreak}</div>
+        <div class="stat-lbl">Racha m&aacute;s larga</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">${d.totalExercises}</div>
+        <div class="stat-lbl">Ejercicios totales</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">${d.wordBankSize}</div>
+        <div class="stat-lbl">Banco de palabras</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Activity (16 weeks)</div>
+      <div class="card-body">
+        <div style="display:flex;gap:2px;overflow-x:auto">${heatmapCells}</div>
+        <div style="margin-top:6px;font-size:11px;color:var(--muted-fg)">&#x25A0; Active day</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Recent Submissions (last 20)</div>
+      <div class="card-body" style="padding:0">
+        ${d.recentSubmissions.length === 0
+          ? `<div style="padding:20px;text-align:center;color:var(--muted-fg);font-style:italic">No submissions yet.</div>`
+          : `<table><thead><tr><th>Date</th><th>Exercise</th><th>Score</th><th>Feedback</th></tr></thead><tbody>${submissionRows}</tbody></table>`
+        }
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Word Bank (first 20)</div>
+      <div class="card-body">
+        ${d.wordBank.length === 0
+          ? `<span style="color:var(--muted-fg);font-style:italic">No words yet.</span>`
+          : wordBankRows
+        }
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>`;
 }

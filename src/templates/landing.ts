@@ -37,14 +37,19 @@ export function renderLanding(error?: string): string {
 
     .intro{font-size:15px;line-height:1.7;color:var(--n600);margin-bottom:32px}
 
+    .guest-btn{display:block;width:100%;padding:16px;background:var(--fg);color:var(--bg);border:1px solid transparent;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:2px;cursor:pointer;transition:all .2s;margin-bottom:28px}
+    .guest-btn:hover{opacity:.85}
+
+    .divider-text{font-family:'Inter',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:3px;color:var(--n500);text-align:center;margin-bottom:20px}
+
     .login-form{text-align:left}
     .login-form label{font-family:'Inter',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--n500);display:block;margin-bottom:8px}
     .login-form input[type="email"]{width:100%;padding:14px 0;font-family:'Lora',Georgia,serif;font-size:16px;border:none;border-bottom:1px solid var(--muted);border-radius:0;background:transparent;color:var(--fg);outline:none;transition:border-color .2s}
     .login-form input[type="email"]:focus{border-bottom-color:var(--fg)}
     .login-form input[type="email"]::placeholder{color:var(--n500)}
 
-    .submit-btn{display:block;width:100%;margin-top:16px;padding:14px;background:var(--fg);color:var(--bg);border:1px solid transparent;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:2px;cursor:pointer;transition:all .2s}
-    .submit-btn:hover{background:var(--bg);color:var(--fg);border-color:var(--fg)}
+    .submit-btn{display:block;width:100%;margin-top:16px;padding:12px;background:transparent;color:var(--fg);border:1px solid var(--muted);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:2px;cursor:pointer;transition:all .2s}
+    .submit-btn:hover{border-color:var(--fg)}
 
     .error-msg{margin-top:16px;padding:12px 16px;border:1px solid var(--red);color:var(--red);font-family:'Inter',sans-serif;font-size:13px;text-align:center}
 
@@ -70,11 +75,15 @@ export function renderLanding(error?: string): string {
 
     <div class="ornament">───── § ─────</div>
 
-    <p class="intro">Ingresa tu correo electrónico para acceder a tus ejercicios de hoy.</p>
+    <form method="POST" action="/guest-login">
+      <button type="submit" class="guest-btn">Comenzar →</button>
+    </form>
+
+    <div class="divider-text">¿Ya tienes cuenta?</div>
 
     <form class="login-form" method="POST" action="/login">
       <label for="email">Correo electrónico</label>
-      <input type="email" id="email" name="email" placeholder="tu@correo.com" required autocomplete="email" autofocus>
+      <input type="email" id="email" name="email" placeholder="tu@correo.com" autocomplete="email">
       <button type="submit" class="submit-btn">Entrar →</button>
     </form>
 

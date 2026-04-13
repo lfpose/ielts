@@ -5,7 +5,8 @@ function esc(text: string): string {
 export function buildInviteEmailHtml(
   userName: string,
   practiceUrl: string,
-  topic: string
+  topic: string,
+  unsubscribeUrl?: string
 ): string {
   return `<!DOCTYPE html>
 <html>
@@ -53,6 +54,7 @@ export function buildInviteEmailHtml(
         <tr><td style="padding:16px 0 0;border-top:1px solid #e0e0e0;">
           <div style="font-size:12px;color:#999;text-align:center;">
             &mdash; IELTS Daily
+            ${unsubscribeUrl ? `<br><a href="${esc(unsubscribeUrl)}" style="color:#bbb;font-size:11px;">Cancelar suscripci&oacute;n</a>` : ""}
           </div>
         </td></tr>
 

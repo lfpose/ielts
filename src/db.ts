@@ -133,6 +133,18 @@ try {
   db.exec("ALTER TABLE boards ADD COLUMN illustration TEXT");
 }
 
+// --- Migration: Add is_guest and email_unsubscribed columns to users ---
+try {
+  db.prepare("SELECT is_guest FROM users LIMIT 0").run();
+} catch {
+  db.exec("ALTER TABLE users ADD COLUMN is_guest INTEGER DEFAULT 0");
+}
+try {
+  db.prepare("SELECT email_unsubscribed FROM users LIMIT 0").run();
+} catch {
+  db.exec("ALTER TABLE users ADD COLUMN email_unsubscribed INTEGER DEFAULT 0");
+}
+
 // --- Pre-populate topic_queue with 60 topics across 20 categories ---
 const SEED_TOPICS = [
   // Science
@@ -282,6 +294,8 @@ export interface User {
   email: string;
   name: string;
   token: string;
+  is_guest: number;
+  email_unsubscribed: number;
   created_at: string;
 }
 
@@ -378,14 +392,40 @@ export function getUserByEmail(email: string): User | undefined {
   return db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User | undefined;
 }
 
+export function getUserById(id: number): User | undefined {
+  return db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User | undefined;
+}
+
 export function getAllUsers(): User[] {
   return db.prepare("SELECT * FROM users ORDER BY id").all() as User[];
+}
+
+export function getEmailableUsers(): User[] {
+  return db.prepare("SELECT * FROM users WHERE is_guest = 0 AND email_unsubscribed = 0 ORDER BY id").all() as User[];
 }
 
 export function createUser(email: string, name: string): User {
   const token = crypto.randomUUID();
   db.prepare("INSERT INTO users (email, name, token) VALUES (?, ?, ?)").run(email, name, token);
   return getUserByEmail(email)!;
+}
+
+export function createGuestUser(): User {
+  const token = crypto.randomUUID();
+  const guestEmail = `guest_${token}@guest.local`;
+  db.prepare("INSERT INTO users (email, name, token, is_guest) VALUES (?, ?, ?, 1)").run(guestEmail, "Invitado", token);
+  return getUserByToken(token)!;
+}
+
+export function registerGuestUser(token: string, email: string, name: string): User | undefined {
+  const existing = getUserByEmail(email);
+  if (existing && existing.token !== token) return undefined; // email taken by someone else
+  db.prepare("UPDATE users SET email = ?, name = ?, is_guest = 0 WHERE token = ?").run(email, name, token);
+  return getUserByToken(token);
+}
+
+export function setEmailUnsubscribed(token: string): void {
+  db.prepare("UPDATE users SET email_unsubscribed = 1 WHERE token = ?").run(token);
 }
 
 export function deleteUser(id: number): void {

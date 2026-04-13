@@ -247,6 +247,26 @@ export function renderDashboard(
       100%{opacity:0;transform:translateY(100vh) rotate(720deg) scale(0.5)}
     }
 
+    /* === EMAIL PROMPT MODAL === */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:none;align-items:center;justify-content:center;padding:24px}
+    .modal-overlay.open{display:flex}
+    .modal-box{background:var(--bg);border:1px solid var(--muted);max-width:420px;width:100%;padding:32px 28px;text-align:center}
+    .modal-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:12px}
+    .modal-desc{font-family:'Lora',serif;font-size:15px;color:var(--n600);line-height:1.7;margin-bottom:20px}
+    .modal-input{width:100%;padding:12px;font-family:'Lora',serif;font-size:15px;border:none;border-bottom:2px solid var(--muted);background:transparent;color:var(--fg);outline:none;transition:border-color .2s;margin-bottom:16px}
+    .modal-input:focus{border-bottom-color:var(--fg)}
+    .modal-btn{width:100%;padding:13px;background:var(--fg);color:var(--bg);border:none;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;cursor:pointer;margin-bottom:10px;transition:opacity .15s}
+    .modal-btn:hover{opacity:.85}
+    .modal-btn-skip{background:none;border:none;font-family:'Inter',sans-serif;font-size:12px;color:var(--n500);cursor:pointer;text-decoration:underline;transition:color .15s}
+    .modal-btn-skip:hover{color:var(--fg)}
+    .modal-note{font-family:'Inter',sans-serif;font-size:11px;color:var(--n500);margin-top:12px}
+    .modal-success{font-family:'Lora',serif;font-size:15px;color:var(--correct);display:none;padding:8px 0}
+    .modal-error{font-family:'Inter',sans-serif;font-size:12px;color:var(--red);display:none;margin-top:6px}
+
+    /* === GUEST NUDGE === */
+    .guest-nudge{font-family:'Inter',sans-serif;font-size:12px;color:var(--n500);background:var(--n100);padding:8px 16px;text-align:center;cursor:pointer;transition:color .15s;border-bottom:1px solid var(--muted)}
+    .guest-nudge:hover{color:var(--fg)}
+
     /* === MOBILE === */
     @media(max-width:700px){
       .shell{padding:16px 12px}
@@ -266,6 +286,11 @@ export function renderDashboard(
 </head>
 <body>
   <div class="shell">
+
+    ${user.is_guest ? `<!-- GUEST NUDGE -->
+    <div class="guest-nudge" id="guestNudge" onclick="document.getElementById('emailModal').classList.add('open')">
+      Guarda tu progreso &mdash; ingresa tu correo para acceder desde cualquier dispositivo &rarr;
+    </div>` : ""}
 
     <!-- EDITION LINE -->
     <div class="edition-line">
@@ -400,7 +425,73 @@ export function renderDashboard(
       if(key)sessionStorage.setItem(key,'1');
       setTimeout(function(){box.remove()},4000);
     })();
+
+    /* Email prompt modal */
+    (function(){
+      var isGuest = ${user.is_guest ? "true" : "false"};
+      if (!isGuest) return;
+      var modal = document.getElementById('emailModal');
+      if (!modal) return;
+      var pending = sessionStorage.getItem('emailPromptPending');
+      if (pending === '1') {
+        sessionStorage.removeItem('emailPromptPending');
+        if (!localStorage.getItem('email_prompt_dismissed')) {
+          modal.classList.add('open');
+        }
+      }
+      document.getElementById('emailModalSkip').addEventListener('click', function() {
+        localStorage.setItem('email_prompt_dismissed', '1');
+        modal.classList.remove('open');
+      });
+      modal.addEventListener('click', function(e) { if (e.target === modal) modal.classList.remove('open'); });
+      document.getElementById('emailModalForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var emailVal = document.getElementById('emailModalInput').value.trim();
+        var errEl = document.getElementById('emailModalErr');
+        var successEl = document.getElementById('emailModalSuccess');
+        if (!emailVal || !emailVal.includes('@')) { errEl.textContent = 'Por favor ingresa un correo válido.'; errEl.style.display = 'block'; return; }
+        errEl.style.display = 'none';
+        var btn = document.getElementById('emailModalSubmit');
+        btn.disabled = true; btn.textContent = 'Guardando...';
+        fetch('/s/${esc(user.token)}/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailVal })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.ok) {
+            successEl.style.display = 'block';
+            document.getElementById('emailModalFormContent').style.display = 'none';
+            localStorage.setItem('email_prompt_dismissed', '1');
+            setTimeout(function() { modal.classList.remove('open'); }, 2000);
+          } else {
+            errEl.textContent = d.error || 'Error al guardar.'; errEl.style.display = 'block';
+            btn.disabled = false; btn.textContent = 'Guardar progreso';
+          }
+        })
+        .catch(function() { errEl.textContent = 'Error de conexión.'; errEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Guardar progreso'; });
+      });
+    })();
   </script>
+
+  ${user.is_guest ? `<div class="modal-overlay" id="emailModal">
+    <div class="modal-box">
+      <div class="modal-title">¡Buen trabajo!</div>
+      <div id="emailModalFormContent">
+        <div class="modal-desc">Guarda tu progreso y recibe el ejercicio diario en tu correo &mdash; completamente opcional.</div>
+        <form id="emailModalForm">
+          <input class="modal-input" id="emailModalInput" type="email" placeholder="Tu correo electrónico" autocomplete="email">
+          <div class="modal-error" id="emailModalErr"></div>
+          <button type="submit" class="modal-btn" id="emailModalSubmit">Guardar progreso</button>
+          <button type="button" class="modal-btn-skip" id="emailModalSkip">Ahora no</button>
+          <div class="modal-note">Sin spam. Cancela cuando quieras.</div>
+        </form>
+      </div>
+      <div class="modal-success" id="emailModalSuccess">¡Listo! Tu progreso está guardado.</div>
+    </div>
+  </div>` : ""}
+
 </body>
 </html>`;
 }

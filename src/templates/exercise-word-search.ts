@@ -413,7 +413,7 @@ export function renderWordSearch(
       body: JSON.stringify({ answers: { found_words: foundWords } })
     })
     .then(function(r) { return r.json(); })
-    .then(function() { window.location.reload(); })
+    .then(function(d) { if(d&&d.showEmailPrompt)sessionStorage.setItem('emailPromptPending','1'); window.location.reload(); })
     .catch(function(err) { console.error('Submit failed:', err); });
   }
 

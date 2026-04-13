@@ -12,11 +12,12 @@ export async function sendInviteEmail(
   to: string,
   userName: string,
   practiceUrl: string,
-  topic: string
+  topic: string,
+  unsubscribeUrl?: string
 ): Promise<void> {
   const fromEmail = getFromEmail();
 
-  const html = buildInviteEmailHtml(userName, practiceUrl, topic);
+  const html = buildInviteEmailHtml(userName, practiceUrl, topic, unsubscribeUrl);
 
   const { error } = await resend.emails.send({
     from: fromEmail,

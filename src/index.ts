@@ -9,7 +9,7 @@ import {
   logTopicUsage,
   logEmail,
   getSetting,
-  getAllUsers,
+  getEmailableUsers,
   repopulateTopicsIfNeeded,
 } from "./db.js";
 import { pickTopic, generateBoard } from "./services/content.js";
@@ -74,8 +74,7 @@ export async function runDailyJob() {
 
   // 6. Send daily email to all recipients
   const baseUrl = getSetting("base_url") || "https://ielts.fly.dev";
-  const recipientsSetting = getSetting("recipients") || "";
-  const users = getAllUsers();
+  const users = getEmailableUsers();
   const startTime = Date.now();
 
   if (users.length === 0) {
@@ -85,7 +84,8 @@ export async function runDailyJob() {
     for (const user of users) {
       try {
         const practiceUrl = `${baseUrl}/s/${user.token}`;
-        await sendInviteEmail(user.email, user.name, practiceUrl, topic);
+        const unsubscribeUrl = `${baseUrl}/unsubscribe?token=${user.token}`;
+        await sendInviteEmail(user.email, user.name, practiceUrl, topic, unsubscribeUrl);
         emailResults.push(`${user.email}: sent`);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

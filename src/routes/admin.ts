@@ -30,6 +30,9 @@ import {
   getTotalSubmissions,
   getTotalBoardsCompleted,
   getUserWordBankCount,
+  getUserById,
+  getUserWordBank,
+  getRecentSubmissionsWithType,
   getActivityData,
   addTopic,
   removeTopic,
@@ -40,7 +43,7 @@ import {
   logTopicUsage,
   type User,
 } from "../db.js";
-import { renderAdminDashboard } from "../templates/admin.js";
+import { renderAdminDashboard, renderUserDetail } from "../templates/admin.js";
 import { sendInviteEmail } from "../services/email.js";
 import {
   pickTopic,
@@ -406,6 +409,41 @@ app.post("/users/add", async (c) => {
   }
 
   return c.redirect("/admin");
+});
+
+// =============================================
+// GET /admin/users/:id/detail — User detail page
+// =============================================
+
+app.get("/users/:id/detail", (c) => {
+  const userId = parseInt(c.req.param("id"), 10);
+  if (isNaN(userId)) return c.text("Not found", 404);
+  const user = getUserById(userId);
+  if (!user) return c.text("User not found", 404);
+
+  const wordBank = getUserWordBank(userId);
+  const recentSubs = getRecentSubmissionsWithType(userId, 20);
+  const actData = getActivityData(userId);
+
+  return c.html(renderUserDetail({
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      token: user.token,
+      created_at: user.created_at,
+      is_guest: user.is_guest,
+    },
+    streak: getCurrentStreak(userId),
+    longestStreak: getLongestStreak(userId),
+    totalExercises: getTotalSubmissions(userId),
+    totalBoards: getTotalBoardsCompleted(userId),
+    wordBankSize: getUserWordBankCount(userId),
+    lastActive: null,
+    recentSubmissions: recentSubs.map(s => ({ ...s, exercise_type: s.exercise_type as string })),
+    activityData: actData,
+    wordBank: wordBank.slice(0, 20).map(w => ({ word: w.word })),
+  }));
 });
 
 // =============================================

@@ -437,7 +437,7 @@ export function renderShortReading(
       body: JSON.stringify({ answers: answers })
     })
     .then(function(r) { return r.json(); })
-    .then(function() { window.location.reload(); })
+    .then(function(d) { if(d&&d.showEmailPrompt)sessionStorage.setItem('emailPromptPending','1'); window.location.reload(); })
     .catch(function() { btn.disabled = false; btn.textContent = 'Enviar respuestas'; });
   });
 })();
