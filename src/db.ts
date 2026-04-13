@@ -307,7 +307,7 @@ export interface Board {
   created_at: string;
 }
 
-export type ExerciseType = "long_reading" | "short_reading" | "vocabulary" | "fill_gap" | "writing_micro" | "mini_writing" | "word_search";
+export type ExerciseType = "long_reading" | "short_reading" | "vocabulary" | "fill_gap" | "writing_micro" | "mini_writing" | "word_search" | "hangman" | "number_words";
 
 export interface Exercise {
   id: number;
@@ -466,6 +466,7 @@ export function deleteBoardByDate(date: string): void {
   const board = getBoardByDate(date);
   if (!board) return;
   db.prepare("DELETE FROM submissions WHERE exercise_id IN (SELECT id FROM exercises WHERE board_id = ?)").run(board.id);
+  db.prepare("UPDATE word_bank SET source_exercise_id = NULL WHERE source_exercise_id IN (SELECT id FROM exercises WHERE board_id = ?)").run(board.id);
   db.prepare("DELETE FROM exercises WHERE board_id = ?").run(board.id);
   db.prepare("DELETE FROM topic_history WHERE board_id = ?").run(board.id);
   db.prepare("DELETE FROM boards WHERE id = ?").run(board.id);
