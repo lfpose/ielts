@@ -9,8 +9,8 @@ export function renderAdminLogin(error?: string): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin · The IELTS Daily</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=block');
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Inter,system-ui,sans-serif;background:#f1f5f9;color:#0f172a;min-height:100vh;display:flex;align-items:center;justify-content:center}
     .card{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);max-width:400px;width:100%;padding:32px;margin:16px}

@@ -97,10 +97,19 @@ app.post("/logout", (c) => {
   return c.redirect("/admin");
 });
 
+// Explicit GET /login route (in case middleware doesn't catch it)
+app.get("/login", (c) => {
+  const token = getCookie(c, "admin_session");
+  if (token && activeSessions.has(token)) {
+    return c.redirect("/admin");
+  }
+  return c.html(renderAdminLogin());
+});
+
 // Auth middleware for all other admin routes
 app.use("/*", async (c, next) => {
   // Skip middleware for login/logout (already handled above)
-  const path = c.req.path.replace(/^\/admin/, "");
+  const path = new URL(c.req.url).pathname.replace(/^\/admin/, "");
   if (path === "/login" || path === "/logout") return next();
 
   const token = getCookie(c, "admin_session");
@@ -153,11 +162,11 @@ app.post("/generate", async (c) => {
   const today = new Date().toISOString().slice(0, 10);
   const existing = getTodaysBoard();
   if (existing) {
-    return c.json({ error: "Board already exists for today. Use regenerate instead." }, 409);
+    return c.redirect("/admin");
   }
 
-  const body = await c.req.json().catch(() => ({}));
-  const requestedTopic = body.topic as string | undefined;
+  const body = await c.req.parseBody().catch(() => ({} as Record<string, string>));
+  const requestedTopic = (body.topic as string) || undefined;
 
   const { topic } = pickTopic(requestedTopic);
 
@@ -176,11 +185,10 @@ app.post("/generate", async (c) => {
     }
     markTopicUsed(topic, today);
     logTopicUsage(topic, today, board.id);
-    return c.json({ success: true, boardId: board.id, topic });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return c.json({ error: `Generation failed: ${msg}` }, 500);
+    console.error("Board generation failed:", err);
   }
+  return c.redirect("/admin");
 });
 
 // =============================================
@@ -189,8 +197,8 @@ app.post("/generate", async (c) => {
 
 app.post("/regenerate", async (c) => {
   const today = new Date().toISOString().slice(0, 10);
-  const body = await c.req.json().catch(() => ({}));
-  const useNewTopic = body.newTopic === true;
+  const body = await c.req.parseBody().catch(() => ({} as Record<string, string>));
+  const useNewTopic = body.newTopic === "true";
 
   // Save existing topic before deleting
   const existing = getTodaysBoard();
@@ -223,11 +231,10 @@ app.post("/regenerate", async (c) => {
     }
     markTopicUsed(topic, today);
     logTopicUsage(topic, today, board.id);
-    return c.json({ success: true, boardId: board.id, topic });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return c.json({ error: `Regeneration failed: ${msg}` }, 500);
+    console.error("Board regeneration failed:", err);
   }
+  return c.redirect("/admin");
 });
 
 // =============================================
@@ -236,15 +243,15 @@ app.post("/regenerate", async (c) => {
 
 app.post("/exercise/:id/regenerate", async (c) => {
   const exerciseId = parseInt(c.req.param("id"), 10);
-  if (isNaN(exerciseId)) return c.json({ error: "Invalid exercise ID" }, 400);
+  if (isNaN(exerciseId)) return c.redirect("/admin");
 
   const exercise = getExerciseById(exerciseId);
-  if (!exercise) return c.json({ error: "Exercise not found" }, 404);
+  if (!exercise) return c.redirect("/admin");
 
   // Get the board to know the topic
   const { getBoardById } = await import("../db.js");
   const board = getBoardById(exercise.board_id);
-  if (!board) return c.json({ error: "Board not found" }, 404);
+  if (!board) return c.redirect("/admin");
 
   const difficulty = getSetting("difficulty") || "B2";
 
@@ -286,7 +293,7 @@ app.post("/exercise/:id/regenerate", async (c) => {
         maxScore = 3;
         break;
       default:
-        return c.json({ error: `Unknown exercise type: ${exercise.type}` }, 400);
+        return c.redirect("/admin");
     }
 
     // Delete old exercise and create new one in the same slot
@@ -294,19 +301,17 @@ app.post("/exercise/:id/regenerate", async (c) => {
     const boardId = exercise.board_id;
     deleteExercise(exerciseId);
 
-    const newExercise = createExercise({
+    createExercise({
       board_id: boardId,
       slot,
       type: exercise.type,
       content: JSON.stringify(content),
       max_score: maxScore,
     });
-
-    return c.json({ success: true, exerciseId: newExercise.id });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return c.json({ error: `Exercise regeneration failed: ${msg}` }, 500);
+    console.error("Exercise regeneration failed:", err);
   }
+  return c.redirect("/admin");
 });
 
 // =============================================
@@ -316,14 +321,14 @@ app.post("/exercise/:id/regenerate", async (c) => {
 app.post("/email", async (c) => {
   const board = getTodaysBoard();
   if (!board) {
-    return c.json({ error: "No board exists for today. Generate one first." }, 400);
+    return c.redirect("/admin");
   }
 
   const baseUrl = getSetting("base_url") || "https://ielts-daily.fly.dev";
   const users = getAllUsers();
 
   if (users.length === 0) {
-    return c.json({ error: "No users to send email to." }, 400);
+    return c.redirect("/admin");
   }
 
   const startTime = Date.now();
@@ -350,7 +355,7 @@ app.post("/email", async (c) => {
     durationMs
   );
 
-  return c.json({ success: true, results, durationMs });
+  return c.redirect("/admin");
 });
 
 // =============================================
@@ -372,18 +377,18 @@ app.post("/settings", async (c) => {
 // =============================================
 
 app.post("/users/add", async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const name = body.name as string;
-  const email = body.email as string;
-  const sendWelcome = body.sendWelcome === true;
+  const body = await c.req.parseBody().catch(() => ({} as Record<string, string>));
+  const name = (body.name as string || "").trim();
+  const email = (body.email as string || "").trim();
+  const sendWelcome = body.sendWelcome === "true" || body.sendWelcome === "on";
 
   if (!name || !email) {
-    return c.json({ error: "Name and email are required" }, 400);
+    return c.redirect("/admin");
   }
 
   const existing = getUserByEmail(email);
   if (existing) {
-    return c.json({ error: "User with this email already exists" }, 409);
+    return c.redirect("/admin");
   }
 
   const user = createUser(email, name);
@@ -400,7 +405,7 @@ app.post("/users/add", async (c) => {
     }
   }
 
-  return c.json({ success: true, user: { id: user.id, name: user.name, email: user.email, token: user.token } });
+  return c.redirect("/admin");
 });
 
 // =============================================
@@ -409,10 +414,10 @@ app.post("/users/add", async (c) => {
 
 app.post("/users/:id/remove", async (c) => {
   const userId = parseInt(c.req.param("id"), 10);
-  if (isNaN(userId)) return c.json({ error: "Invalid user ID" }, 400);
-
-  deleteUser(userId);
-  return c.json({ success: true });
+  if (!isNaN(userId)) {
+    deleteUser(userId);
+  }
+  return c.redirect("/admin");
 });
 
 // =============================================
@@ -453,11 +458,12 @@ app.get("/users/:id", (c) => {
 // =============================================
 
 app.post("/topics/reorder", async (c) => {
+  // Reorder accepts JSON (typically called via JS fetch from drag-drop UI)
   const body = await c.req.json().catch(() => ({}));
   const topics = body.topics as string[];
 
   if (!Array.isArray(topics) || topics.length === 0) {
-    return c.json({ error: "topics array is required" }, 400);
+    return c.redirect("/admin");
   }
 
   // Get all current topics for lookup
@@ -477,7 +483,7 @@ app.post("/topics/reorder", async (c) => {
   });
   reorder();
 
-  return c.json({ success: true });
+  return c.redirect("/admin");
 });
 
 // =============================================
@@ -485,15 +491,13 @@ app.post("/topics/reorder", async (c) => {
 // =============================================
 
 app.post("/topics/add", async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const topic = body.topic as string;
+  const body = await c.req.parseBody().catch(() => ({} as Record<string, string>));
+  const topic = (body.topic as string || "").trim();
 
-  if (!topic) {
-    return c.json({ error: "topic is required" }, 400);
+  if (topic) {
+    addTopic(topic);
   }
-
-  addTopic(topic);
-  return c.json({ success: true });
+  return c.redirect("/admin");
 });
 
 // =============================================
@@ -501,21 +505,13 @@ app.post("/topics/add", async (c) => {
 // =============================================
 
 app.post("/topics/remove", async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const topic = body.topic as string;
+  const body = await c.req.parseBody().catch(() => ({} as Record<string, string>));
+  const topicId = parseInt(body.topicId as string, 10);
 
-  if (!topic) {
-    return c.json({ error: "topic is required" }, 400);
+  if (!isNaN(topicId)) {
+    removeTopic(topicId);
   }
-
-  const allTopics = getAllTopics();
-  const entry = allTopics.find((t) => t.topic === topic);
-  if (!entry) {
-    return c.json({ error: "Topic not found" }, 404);
-  }
-
-  removeTopic(entry.id);
-  return c.json({ success: true });
+  return c.redirect("/admin");
 });
 
 // =============================================
@@ -523,21 +519,13 @@ app.post("/topics/remove", async (c) => {
 // =============================================
 
 app.post("/topics/force", async (c) => {
-  const body = await c.req.json().catch(() => ({}));
-  const topic = body.topic as string;
+  const body = await c.req.parseBody().catch(() => ({} as Record<string, string>));
+  const topicId = parseInt(body.topicId as string, 10);
 
-  if (!topic) {
-    return c.json({ error: "topic is required" }, 400);
+  if (!isNaN(topicId)) {
+    forceTopic(topicId);
   }
-
-  const allTopics = getAllTopics();
-  const entry = allTopics.find((t) => t.topic === topic);
-  if (!entry) {
-    return c.json({ error: "Topic not found" }, 404);
-  }
-
-  forceTopic(entry.id);
-  return c.json({ success: true });
+  return c.redirect("/admin");
 });
 
 // =============================================

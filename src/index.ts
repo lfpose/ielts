@@ -44,9 +44,9 @@ export async function runDailyJob() {
       generated = await generateBoard(topic);
       break;
     } catch (err) {
-      console.error(`Generation attempt ${attempt} failed:`, err);
+      console.error(`[CRON] Generation attempt ${attempt} failed:`, err instanceof Error ? err.stack : err);
       if (attempt === MAX_RETRIES) {
-        console.error("All generation attempts failed. Aborting daily job.");
+        console.error("[CRON FATAL] All generation attempts failed. Aborting daily job.");
         return;
       }
     }
@@ -109,8 +109,16 @@ export async function runDailyJob() {
   console.log(`[${new Date().toISOString()}] Daily job completed for ${today}.`);
 }
 
-cron.schedule("0 4 * * *", runDailyJob);
+cron.schedule("0 4 * * *", () => {
+  runDailyJob().catch(err => {
+    console.error(`[CRON FATAL] Daily job failed:`, err);
+  });
+});
 console.log("IELTS Daily scheduler started. Cron: 00:00 CLT (04:00 UTC).");
+
+// Startup diagnostic
+const startupBoard = getTodaysBoard();
+console.log(`[STARTUP] Today's board: ${startupBoard ? startupBoard.topic : "NOT GENERATED"}`);
 
 const app = new Hono();
 
@@ -159,4 +167,8 @@ serve({ fetch: app.fetch, port, hostname: "0.0.0.0" }, () => {
   console.log(`Server running on http://0.0.0.0:${port}`);
 });
 
-if (process.env.RUN_NOW === "true") runDailyJob();
+if (process.env.RUN_NOW === "true") {
+  runDailyJob().catch(err => {
+    console.error("[RUN_NOW FATAL] Daily job failed:", err);
+  });
+}
