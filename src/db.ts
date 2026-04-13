@@ -469,6 +469,7 @@ export function deleteBoardByDate(date: string): void {
   db.prepare("UPDATE word_bank SET source_exercise_id = NULL WHERE source_exercise_id IN (SELECT id FROM exercises WHERE board_id = ?)").run(board.id);
   db.prepare("DELETE FROM exercises WHERE board_id = ?").run(board.id);
   db.prepare("DELETE FROM topic_history WHERE board_id = ?").run(board.id);
+  db.prepare("UPDATE email_log SET board_id = NULL WHERE board_id = ?").run(board.id);
   db.prepare("DELETE FROM boards WHERE id = ?").run(board.id);
 }
 

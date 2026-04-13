@@ -165,7 +165,7 @@ app.post("/generate", async (c) => {
   const today = new Date().toISOString().slice(0, 10);
   const existing = getTodaysBoard();
   if (existing) {
-    return c.redirect("/admin");
+    return c.json({ ok: true, skipped: true });
   }
 
   const body = await c.req.parseBody().catch(() => ({} as Record<string, string>));
@@ -188,10 +188,11 @@ app.post("/generate", async (c) => {
     }
     markTopicUsed(topic, today);
     logTopicUsage(topic, today, board.id);
-  } catch (err) {
+    return c.json({ ok: true, topic });
+  } catch (err: any) {
     console.error("Board generation failed:", err);
+    return c.json({ ok: false, error: err.message }, 500);
   }
-  return c.redirect("/admin");
 });
 
 // =============================================
@@ -240,10 +241,11 @@ app.post("/regenerate", async (c) => {
     }
     markTopicUsed(topic, today);
     logTopicUsage(topic, today, board.id);
-  } catch (err) {
+    return c.json({ ok: true, topic });
+  } catch (err: any) {
     console.error("Board regeneration failed:", err);
+    return c.json({ ok: false, error: err.message }, 500);
   }
-  return c.redirect("/admin");
 });
 
 // =============================================

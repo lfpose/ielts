@@ -745,6 +745,76 @@ export function renderAdminDashboard(data: AdminData): string {
       toast.style.display = 'block';
       setTimeout(function() { toast.style.display = 'none'; }, 3000);
     }
+
+    // Board generation/regeneration via fetch (no page navigation)
+    var spinnerFrames = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+    function boardFetch(url, body, statusEl, btnEl, btnLabel) {
+      if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Working…'; }
+      if (statusEl) { statusEl.style.display = 'inline'; }
+      var spinIdx = 0;
+      var spinTimer = statusEl ? setInterval(function() {
+        spinIdx = (spinIdx + 1) % spinnerFrames.length;
+        statusEl.textContent = spinnerFrames[spinIdx] + ' Generating board… this takes ~30s';
+      }, 80) : null;
+      if (statusEl) statusEl.textContent = spinnerFrames[0] + ' Generating board… this takes ~30s';
+
+      var fd = new FormData();
+      Object.keys(body).forEach(function(k) { fd.append(k, body[k]); });
+      fetch(url, { method: 'POST', body: fd })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (spinTimer) clearInterval(spinTimer);
+          if (d.ok) {
+            if (statusEl) statusEl.textContent = '✓ Done! Reloading…';
+            setTimeout(function() { window.location.reload(); }, 800);
+          } else {
+            if (statusEl) { statusEl.style.color = 'var(--admin-destructive)'; statusEl.textContent = '✗ Error: ' + (d.error || 'Unknown error'); }
+            if (btnEl) { btnEl.disabled = false; btnEl.textContent = btnLabel; }
+          }
+        })
+        .catch(function(err) {
+          if (spinTimer) clearInterval(spinTimer);
+          if (statusEl) { statusEl.style.color = 'var(--admin-destructive)'; statusEl.textContent = '✗ Request failed'; }
+          if (btnEl) { btnEl.disabled = false; btnEl.textContent = btnLabel; }
+        });
+    }
+
+    function regenSameTopic(topic) {
+      if (!confirm('Regenerate today\\'s board with the same topic ("' + topic + '")?')) return;
+      var statusEl = document.getElementById('regenStatus');
+      var btns = document.querySelectorAll('.edition-actions button');
+      btns.forEach(function(b) { b.disabled = true; });
+      if (statusEl) statusEl.style.display = 'inline';
+      boardFetch('/admin/regenerate', {}, statusEl, null, '');
+    }
+
+    function regenWithTopic() {
+      var sel = document.getElementById('regenSelect');
+      var custom = document.getElementById('regenCustom');
+      var topic = sel ? sel.value : '';
+      var customVal = custom ? custom.value.trim() : '';
+      var body = { newTopic: 'true' };
+      if (topic === '__custom__') { if (!customVal) { alert('Enter a custom topic.'); return; } body.topic = '__custom__'; body.customTopic = customVal; }
+      else if (topic) { body.topic = topic; }
+      var btn = document.getElementById('regenSubmitBtn');
+      var statusEl = document.getElementById('regenStatus');
+      document.querySelectorAll('.edition-actions button').forEach(function(b) { b.disabled = true; });
+      document.getElementById('regenPanel').classList.remove('open');
+      boardFetch('/admin/regenerate', body, statusEl, btn, 'Regenerate Board');
+    }
+
+    function generateBoard() {
+      var sel = document.getElementById('generateTopicSelect');
+      var custom = document.getElementById('generateCustom');
+      var topic = sel ? sel.value : '';
+      var customVal = custom ? custom.value.trim() : '';
+      var body = {};
+      if (topic === '__custom__') { if (!customVal) { alert('Enter a custom topic.'); return; } body.topic = customVal; }
+      else if (topic) { body.topic = topic; }
+      var btn = document.getElementById('generateBtn');
+      var statusEl = document.getElementById('generateStatus');
+      boardFetch('/admin/generate', body, statusEl, btn, 'Generate Today\\'s Board');
+    }
   </script>
 </body>
 </html>`;
@@ -786,33 +856,31 @@ function renderBoardExists(board: Board, exercises: Exercise[], emailSent: boole
       </div>
     </div>
     <div class="edition-actions">
-      <form method="POST" action="/admin/regenerate" onsubmit="return confirm('Regenerate today\\'s board with the same topic (${esc(board.topic)})?')" style="display:inline">
-        <button type="submit" class="btn-outline" onclick="this.textContent='Regenerating...'">↺ Regenerate Same Topic</button>
-      </form>
+      <button type="button" class="btn-outline" onclick="regenSameTopic('${esc(board.topic)}')">↺ Regenerate Same Topic</button>
       <button type="button" class="btn-outline" onclick="document.getElementById('regenPanel').classList.toggle('open')">↺ Regenerate with Topic</button>
+      <span id="regenStatus" style="font-size:13px;color:var(--admin-muted-fg);display:none"></span>
       <form method="POST" action="/admin/email" style="display:inline;margin-left:auto">
         <button type="submit" class="btn${emailSent ? "-outline" : " btn-success"}" onclick="this.textContent='Sending...'">${emailSent ? "Resend Email" : "Send Email"}</button>
       </form>
     </div>
     <div class="regen-panel" id="regenPanel">
-      <form method="POST" action="/admin/regenerate" class="regen-form" onsubmit="this.querySelector('button[type=submit]').textContent='Regenerating...'">
-        <input type="hidden" name="newTopic" value="true">
+      <div class="regen-form">
         <div class="regen-field">
           <label class="regen-label">Topic</label>
-          <select name="topic" class="regen-select" id="regenSelect" onchange="document.getElementById('regenCustom').style.display=this.value==='__custom__'?'block':'none'">
+          <select class="regen-select" id="regenSelect" onchange="document.getElementById('regenCustom').style.display=this.value==='__custom__'?'block':'none'">
             <option value="">Auto-pick from queue</option>
             <optgroup label="Available topics">
               ${topics.filter(t => !t.last_used_on).map(t => `<option value="${esc(t.topic)}">${esc(t.topic)}</option>`).join("")}
             </optgroup>
             <option value="__custom__">Custom topic…</option>
           </select>
-          <input type="text" name="customTopic" id="regenCustom" class="regen-input" placeholder="Enter any topic…" style="display:none;margin-top:8px" autocomplete="off">
+          <input type="text" id="regenCustom" class="regen-input" placeholder="Enter any topic…" style="display:none;margin-top:8px" autocomplete="off">
         </div>
         <div class="regen-actions">
-          <button type="submit" class="btn btn-success">Regenerate Board</button>
+          <button type="button" class="btn btn-success" id="regenSubmitBtn" onclick="regenWithTopic()">Regenerate Board</button>
           <button type="button" class="btn-outline" onclick="document.getElementById('regenPanel').classList.remove('open')">Cancel</button>
         </div>
-      </form>
+      </div>
     </div>
   </div>`;
 }
@@ -827,13 +895,18 @@ function renderNoBoard(topics: AdminData["topics"]): string {
     <div class="no-board">
       <p>No board generated for today yet.</p>
       <div class="generate-form">
-        <form method="POST" action="/admin/generate" class="inline-form">
-          <select name="topic">
-            <option value="">Random Topic</option>
-            ${topicOptions}
+        <div class="inline-form">
+          <select id="generateTopicSelect" class="regen-select" style="min-width:240px" onchange="document.getElementById('generateCustom').style.display=this.value==='__custom__'?'block':'none'">
+            <option value="">Auto-pick from queue</option>
+            <optgroup label="Available topics">
+              ${topicOptions}
+            </optgroup>
+            <option value="__custom__">Custom topic…</option>
           </select>
-          <button type="submit" class="btn btn-success" onclick="this.textContent='Generating...'">Generate Today's Board</button>
-        </form>
+          <input type="text" id="generateCustom" class="regen-input" placeholder="Enter any topic…" style="display:none;margin-top:8px" autocomplete="off">
+          <button type="button" class="btn btn-success" id="generateBtn" onclick="generateBoard()">Generate Today's Board</button>
+        </div>
+        <div id="generateStatus" style="font-size:13px;color:var(--admin-muted-fg);margin-top:8px;display:none"></div>
       </div>
     </div>
   </div>`;
