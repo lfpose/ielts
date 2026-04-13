@@ -126,7 +126,7 @@ export function renderAdminDashboard(data: AdminData): string {
   } = data;
 
   const todaySection = todaysBoard
-    ? renderBoardExists(todaysBoard, exercises, emailSent, baseUrl)
+    ? renderBoardExists(todaysBoard, exercises, emailSent, baseUrl, topics)
     : renderNoBoard(topics);
 
   const metricsSection = `
@@ -509,7 +509,15 @@ export function renderAdminDashboard(data: AdminData): string {
     .exercise-card-preview.open{display:block}
     .exercise-card-actions{padding:8px 16px;border-top:1px solid var(--admin-border);display:none;background:var(--admin-muted)}
     .exercise-card-actions.open{display:flex;gap:8px}
-    .edition-actions{display:flex;gap:8px;padding:16px 20px;border-top:1px solid var(--admin-border);flex-wrap:wrap}
+    .edition-actions{display:flex;gap:8px;padding:16px 20px;border-top:1px solid var(--admin-border);flex-wrap:wrap;align-items:center}
+    .regen-panel{display:none;padding:16px 20px;border-top:1px solid var(--admin-border);background:var(--admin-muted)}
+    .regen-panel.open{display:block}
+    .regen-form{display:flex;flex-direction:column;gap:12px;max-width:480px}
+    .regen-field{display:flex;flex-direction:column;gap:4px}
+    .regen-label{font-size:12px;font-weight:600;color:var(--admin-muted-fg);text-transform:uppercase;letter-spacing:.05em}
+    .regen-select,.regen-input{font-family:var(--admin-font);font-size:13px;padding:8px 10px;border:1px solid var(--admin-border);border-radius:6px;background:var(--admin-card);color:var(--admin-fg);outline:none;width:100%;box-sizing:border-box}
+    .regen-select:focus,.regen-input:focus{border-color:var(--admin-primary)}
+    .regen-actions{display:flex;gap:8px}
 
     /* No board state */
     .no-board{padding:48px 20px;text-align:center}
@@ -735,7 +743,7 @@ export function renderAdminDashboard(data: AdminData): string {
 </html>`;
 }
 
-function renderBoardExists(board: Board, exercises: Exercise[], emailSent: boolean, baseUrl: string): string {
+function renderBoardExists(board: Board, exercises: Exercise[], emailSent: boolean, baseUrl: string, topics: AdminData["topics"]): string {
   const statusBadge = emailSent
     ? '<span class="badge-pill badge-live">Live</span>'
     : '<span class="badge-pill badge-draft">Draft</span>';
@@ -771,15 +779,32 @@ function renderBoardExists(board: Board, exercises: Exercise[], emailSent: boole
       </div>
     </div>
     <div class="edition-actions">
-      <form method="POST" action="/admin/regenerate" style="display:inline">
-        <button type="submit" class="btn-outline" onclick="this.textContent='Regenerating...'">Regenerate All</button>
+      <form method="POST" action="/admin/regenerate" onsubmit="return confirm('Regenerate today\\'s board with the same topic (${esc(board.topic)})?')" style="display:inline">
+        <button type="submit" class="btn-outline" onclick="this.textContent='Regenerating...'">↺ Regenerate Same Topic</button>
       </form>
-      <form method="POST" action="/admin/generate" style="display:inline">
-        <input type="hidden" name="newTopic" value="true">
-        <button type="submit" class="btn-outline" onclick="this.textContent='Generating...'">Regenerate with New Topic</button>
-      </form>
-      <form method="POST" action="/admin/email" style="display:inline">
+      <button type="button" class="btn-outline" onclick="document.getElementById('regenPanel').classList.toggle('open')">↺ Regenerate with Topic</button>
+      <form method="POST" action="/admin/email" style="display:inline;margin-left:auto">
         <button type="submit" class="btn${emailSent ? "-outline" : " btn-success"}" onclick="this.textContent='Sending...'">${emailSent ? "Resend Email" : "Send Email"}</button>
+      </form>
+    </div>
+    <div class="regen-panel" id="regenPanel">
+      <form method="POST" action="/admin/regenerate" class="regen-form" onsubmit="this.querySelector('button[type=submit]').textContent='Regenerating...'">
+        <input type="hidden" name="newTopic" value="true">
+        <div class="regen-field">
+          <label class="regen-label">Topic</label>
+          <select name="topic" class="regen-select" id="regenSelect" onchange="document.getElementById('regenCustom').style.display=this.value==='__custom__'?'block':'none'">
+            <option value="">Auto-pick from queue</option>
+            <optgroup label="Available topics">
+              ${topics.filter(t => !t.last_used_on).map(t => `<option value="${esc(t.topic)}">${esc(t.topic)}</option>`).join("")}
+            </optgroup>
+            <option value="__custom__">Custom topic…</option>
+          </select>
+          <input type="text" name="customTopic" id="regenCustom" class="regen-input" placeholder="Enter any topic…" style="display:none;margin-top:8px" autocomplete="off">
+        </div>
+        <div class="regen-actions">
+          <button type="submit" class="btn btn-success">Regenerate Board</button>
+          <button type="button" class="btn-outline" onclick="document.getElementById('regenPanel').classList.remove('open')">Cancel</button>
+        </div>
       </form>
     </div>
   </div>`;

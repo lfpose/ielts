@@ -202,6 +202,10 @@ app.post("/regenerate", async (c) => {
   const today = new Date().toISOString().slice(0, 10);
   const body = await c.req.parseBody().catch(() => ({} as Record<string, string>));
   const useNewTopic = body.newTopic === "true";
+  const rawTopic = (body.topic as string | undefined)?.trim() || "";
+  const customTopic = rawTopic === "__custom__"
+    ? ((body.customTopic as string | undefined)?.trim() || undefined)
+    : (rawTopic || undefined);
 
   // Save existing topic before deleting
   const existing = getTodaysBoard();
@@ -210,13 +214,15 @@ app.post("/regenerate", async (c) => {
   // Delete existing board
   deleteBoardByDate(today);
 
-  // Pick topic — reuse existing unless newTopic requested
+  // Pick topic: custom > existing (same) > auto-pick new
   let topic: string;
-  if (useNewTopic || !existingTopic) {
+  if (customTopic) {
+    topic = customTopic;
+  } else if (!useNewTopic && existingTopic) {
+    topic = existingTopic;
+  } else {
     const picked = pickTopic();
     topic = picked.topic;
-  } else {
-    topic = existingTopic;
   }
 
   try {
