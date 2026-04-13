@@ -101,7 +101,7 @@ export function renderAdminDashboard(data: AdminData): string {
 
   const todaySection = todaysBoard
     ? renderBoardExists(todaysBoard, exercises, emailSent, baseUrl)
-    : renderNoBoard();
+    : renderNoBoard(topics);
 
   const metricsSection = `
     <div class="metrics-row">
@@ -758,7 +758,11 @@ function renderBoardExists(board: Board, exercises: Exercise[], emailSent: boole
   </div>`;
 }
 
-function renderNoBoard(): string {
+function renderNoBoard(topics: AdminData["topics"]): string {
+  const topicOptions = topics
+    .filter(t => !t.last_used_on)
+    .map(t => `<option value="${esc(t.topic)}">${esc(t.topic)}</option>`)
+    .join("");
   return `
   <div class="edition-hero">
     <div class="no-board">
@@ -767,6 +771,7 @@ function renderNoBoard(): string {
         <form method="POST" action="/admin/generate" class="inline-form">
           <select name="topic">
             <option value="">Random Topic</option>
+            ${topicOptions}
           </select>
           <button type="submit" class="btn btn-success" onclick="this.textContent='Generating...'">Generate Today's Board</button>
         </form>
