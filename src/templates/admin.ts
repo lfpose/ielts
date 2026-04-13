@@ -455,7 +455,7 @@ export function renderAdminDashboard(data: AdminData): string {
     .action-dropdown{position:relative;display:inline-block}
     .action-dropdown-btn{background:var(--admin-card);border:1px solid var(--admin-border);border-radius:6px;padding:4px 10px;font-family:var(--admin-font);font-size:12px;font-weight:500;color:var(--admin-fg);cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .12s}
     .action-dropdown-btn:hover{border-color:var(--admin-fg);background:var(--admin-muted)}
-    .action-dropdown-menu{display:none;position:absolute;right:0;top:calc(100% + 4px);min-width:160px;background:var(--admin-card);border:1px solid var(--admin-border);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:30;padding:4px 0;overflow:hidden}
+    .action-dropdown-menu{display:none;position:fixed;min-width:160px;background:var(--admin-card);border:1px solid var(--admin-border);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:300;padding:4px 0}
     .action-dropdown-menu.open{display:block}
     .action-dropdown-item{display:block;width:100%;padding:7px 14px;font-family:var(--admin-font);font-size:12px;font-weight:500;color:var(--admin-fg);background:none;border:none;cursor:pointer;text-align:left;text-decoration:none;transition:background .1s}
     .action-dropdown-item:hover{background:var(--admin-muted)}
@@ -675,23 +675,26 @@ export function renderAdminDashboard(data: AdminData): string {
     }
     updateThemeIcons();
 
-    // Action dropdown toggle
+    // Action dropdown toggle — uses position:fixed to escape overflow:auto table wrappers
     function toggleDropdown(e) {
       e.stopPropagation();
-      var menu = e.currentTarget.nextElementSibling;
-      document.querySelectorAll('.action-dropdown-menu.open').forEach(function(m) {
-        if (m !== menu) m.classList.remove('open');
-      });
-      menu.classList.toggle('open');
+      var btn = e.currentTarget;
+      var menu = btn.nextElementSibling;
+      var isOpen = menu.classList.contains('open');
+      document.querySelectorAll('.action-dropdown-menu.open').forEach(function(m) { m.classList.remove('open'); });
+      if (!isOpen) {
+        var rect = btn.getBoundingClientRect();
+        menu.style.top = (rect.bottom + 4) + 'px';
+        menu.style.right = (window.innerWidth - rect.right) + 'px';
+        menu.classList.add('open');
+      }
     }
     document.addEventListener('click', function() {
-      document.querySelectorAll('.action-dropdown-menu.open').forEach(function(m) {
-        m.classList.remove('open');
-      });
+      document.querySelectorAll('.action-dropdown-menu.open').forEach(function(m) { m.classList.remove('open'); });
     });
 
     // Section navigation
-    function showSection(id) {
+    function showSection(id, pushHash) {
       document.querySelectorAll('.page-section').forEach(function(s) { s.classList.remove('active'); });
       document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
       var section = document.getElementById('section-' + id);
@@ -702,10 +705,14 @@ export function renderAdminDashboard(data: AdminData): string {
       var overlay = document.getElementById('sidebarOverlay');
       if (sidebar) sidebar.classList.remove('open');
       if (overlay) overlay.classList.remove('open');
+      if (pushHash !== false) history.replaceState(null, '', '#' + id);
     }
 
-    // Set initial active nav
-    document.querySelector('.nav-item[data-section="today"]').classList.add('active');
+    // Restore section from hash, fallback to "today"
+    var initialSection = (location.hash.slice(1)) || 'today';
+    var validSections = ['today','users','email','topics','settings'];
+    if (validSections.indexOf(initialSection) === -1) initialSection = 'today';
+    showSection(initialSection, false);
 
     // Mobile sidebar toggle
     function toggleSidebar() {
