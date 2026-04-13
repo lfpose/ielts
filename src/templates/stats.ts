@@ -12,6 +12,8 @@ const EXERCISE_LABELS: Record<ExerciseType, string> = {
   writing_micro: "Escritura",
   mini_writing: "Mini Escritura",
   word_search: "Sopa de Letras",
+  hangman: "Hangman",
+  number_words: "Números en Palabras",
 };
 
 const EXERCISE_ACCENT: Record<ExerciseType, string> = {
@@ -22,6 +24,8 @@ const EXERCISE_ACCENT: Record<ExerciseType, string> = {
   writing_micro: "#991b1b",
   mini_writing: "#7b2d2d",
   word_search: "#1a4a3a",
+  hangman: "#7a3a00",
+  number_words: "#2a1a5c",
 };
 
 function buildHeatmap(activityData: ActivityDay[]): string {

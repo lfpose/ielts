@@ -108,6 +108,8 @@ export function renderDashboard(
   const fillGap = todaysBoard ? findByType(todaysBoard.exercises, "fill_gap") : undefined;
   const miniWriting = todaysBoard ? findByType(todaysBoard.exercises, "mini_writing") : undefined;
   const writing = todaysBoard ? findByType(todaysBoard.exercises, "writing_micro") : undefined;
+  const hangman = todaysBoard ? findByType(todaysBoard.exercises, "hangman") : undefined;
+  const numberWords = todaysBoard ? findByType(todaysBoard.exercises, "number_words") : undefined;
 
   // Extract content for cards
   const lrData = longReading ? getExcerpt(longReading.content, "long_reading") : { title: "", excerpt: "", words: [] };
@@ -373,6 +375,16 @@ export function renderDashboard(
           <div class="kicker kicker-darkred">MICRO ESCRITURA</div>
           <div class="brief-desc">Escribe 2-3 oraciones sobre el tema de hoy</div>
           ${ctaOrScore(writing, user.token, "Escribir")}
+        </div>` : `<div></div>`}
+        ${hangman ? `<div class="brief-item">
+          <div class="kicker kicker-amber">HANGMAN</div>
+          <div class="brief-desc">Adivina la palabra letra por letra</div>
+          ${ctaOrScore(hangman, user.token, "Jugar")}
+        </div>` : `<div></div>`}
+        ${numberWords ? `<div class="brief-item">
+          <div class="kicker kicker-darkred">N&Uacute;MEROS EN PALABRAS</div>
+          <div class="brief-desc">Escribe los n&uacute;meros con letras en ingl&eacute;s</div>
+          ${ctaOrScore(numberWords, user.token, "Comenzar")}
         </div>` : `<div></div>`}
       </div>
     </div>

@@ -19,6 +19,8 @@ const EXERCISE_TYPE_LABELS: Record<ExerciseType, string> = {
   writing_micro: "Writing Micro",
   mini_writing: "Mini Writing",
   word_search: "Word Search",
+  hangman: "Hangman",
+  number_words: "Numbers in Words",
 };
 
 interface AdminData {
