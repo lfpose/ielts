@@ -172,7 +172,8 @@ export function renderMiniWriting(
 
     ${submission
       ? `<div class="submit-row"><a href="/s/${esc(user.token)}" class="btn-back">Volver al tablero</a></div>`
-      : `<div class="submit-row"><button type="button" class="btn-submit" id="submitBtn" disabled>Enviar oración</button></div>`}
+      : `<div class="submit-row"><button type="button" class="btn-submit" id="submitBtn" disabled>Enviar oración</button></div>
+    <div id="thinkingAnim" style="display:none;align-items:center;gap:10px;justify-content:center;margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--n500)"><span id="spinnerFrame">⠋</span><span id="spinnerMsg">Leyendo tu respuesta...</span></div>`}
 
     <div class="footer">The IELTS Daily</div>
   </div>
@@ -227,17 +228,36 @@ export function renderMiniWriting(
   input.addEventListener('input', updateCounter);
   updateCounter();
 
+  var thinkEl = document.getElementById('thinkingAnim');
+  var spinEl = document.getElementById('spinnerFrame');
+  var msgEl = document.getElementById('spinnerMsg');
+  var spinFrames = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+  var spinMsgs = ['Leyendo tu respuesta...','Analizando gramática...','Evaluando vocabulario...','Preparando feedback...'];
+  var spinTimer, msgTimer;
+
+  function startThinking() {
+    var fi = 0, mi = 0;
+    thinkEl.style.display = 'flex';
+    spinTimer = setInterval(function() { fi = (fi+1)%spinFrames.length; spinEl.textContent = spinFrames[fi]; }, 80);
+    msgTimer = setInterval(function() { mi = (mi+1)%spinMsgs.length; msgEl.textContent = spinMsgs[mi]; }, 1500);
+  }
+  function stopThinking() {
+    clearInterval(spinTimer); clearInterval(msgTimer);
+    thinkEl.style.display = 'none';
+  }
+
   btn.addEventListener('click', function() {
     btn.disabled = true;
-    btn.textContent = 'Enviando...';
+    btn.textContent = 'Evaluando...';
+    startThinking();
     fetch('/s/${esc(user.token)}/exercise/${exercise.id}', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ answers: { text: input.value } })
     })
     .then(function(r) { return r.json(); })
-    .then(function() { window.location.reload(); })
-    .catch(function() { btn.disabled = false; btn.textContent = 'Enviar oración'; });
+    .then(function() { stopThinking(); window.location.reload(); })
+    .catch(function() { stopThinking(); btn.disabled = false; btn.textContent = 'Enviar oración'; });
   });
 })();
 </script>`}

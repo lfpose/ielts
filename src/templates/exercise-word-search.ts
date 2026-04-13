@@ -179,10 +179,10 @@ export function renderWordSearch(
     .wl-hint-btn{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--n500);background:none;border:1px solid var(--muted);border-radius:999px;padding:4px 12px;cursor:pointer;transition:all .15s;margin-left:auto;flex-shrink:0}
     .wl-hint-btn:hover{color:var(--fg);border-color:var(--fg)}
     .wl-hint-btn.used{color:var(--n500);border-color:transparent;cursor:default;opacity:.6}
-    .wl-detail{font-family:'Inter',sans-serif;font-size:12px;color:var(--n600);margin-top:4px;display:none}
-    .wl-detail.visible{display:block}
-    .wl-detail-def{margin-bottom:2px}
-    .wl-detail-ex{font-family:'Lora',Georgia,serif;font-style:italic;font-size:12px;color:var(--n500)}
+    .wl-detail-def{font-family:'Inter',sans-serif;font-size:12px;color:var(--n600);margin-bottom:3px}
+    .wl-detail-ex{font-family:'Lora',Georgia,serif;font-style:italic;font-size:12px;color:var(--n500);margin-bottom:4px}
+    .wl-letter-hint{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--n500);letter-spacing:2px}
+    .wl-word-reveal{font-family:'Playfair Display',Georgia,serif;font-weight:700;font-size:13px;color:var(--correct);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase}
     @keyframes hintPulse{
       0%{background:#FEF3C7;box-shadow:0 0 8px rgba(254,243,199,.8)}
       50%{background:#FDE68A;box-shadow:0 0 16px rgba(253,230,138,.9)}
@@ -231,19 +231,20 @@ export function renderWordSearch(
           <div class="word-list-label">Palabras a buscar</div>
           <div class="word-list" id="word-list">
             ${content.words
-              .map(
-                (w, idx) =>
-                  `<div class="word-list-item" id="wl-item-${idx}" data-word-idx="${idx}">
-                    <div>
-                      <span class="wl-word">${esc(w.word.toUpperCase())}</span>
-                      <div class="wl-detail" id="wl-detail-${idx}">
-                        <div class="wl-detail-def">${esc(w.definition)}</div>
-                        <div class="wl-detail-ex">&ldquo;${esc(w.example)}&rdquo;</div>
-                      </div>
+              .map((w, idx) => {
+                const escaped = w.word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                const blankedEx = esc(w.example.replace(new RegExp(escaped, "gi"), "_____"));
+                const letterHint = Array.from(w.word).map(() => "_").join(" ");
+                return `<div class="word-list-item" id="wl-item-${idx}" data-word-idx="${idx}">
+                    <div style="flex:1;min-width:0">
+                      <div class="wl-word-reveal" id="wl-word-${idx}" style="display:none"></div>
+                      <div class="wl-detail-def">${esc(w.definition)}</div>
+                      <div class="wl-detail-ex">&ldquo;${blankedEx}&rdquo;</div>
+                      <div class="wl-letter-hint">${esc(letterHint)}</div>
                     </div>
                     <button class="wl-hint-btn" id="wl-hint-${idx}" data-word-idx="${idx}" type="button">Pista</button>
-                  </div>`
-              )
+                  </div>`;
+              })
               .join("")}
           </div>
         </div>
@@ -384,8 +385,8 @@ export function renderWordSearch(
         item.style.borderColor = color.border;
         item.style.background = color.bg;
       }
-      var detail = document.getElementById('wl-detail-' + wordIdx);
-      if (detail) detail.classList.add('visible');
+      var wordReveal = document.getElementById('wl-word-' + wordIdx);
+      if (wordReveal) { wordReveal.textContent = wordObj.word.toUpperCase(); wordReveal.style.display = 'block'; }
       var hintBtn = document.getElementById('wl-hint-' + wordIdx);
       if (hintBtn) hintBtn.style.display = 'none';
       // Clear any hint pulse on this word's cells

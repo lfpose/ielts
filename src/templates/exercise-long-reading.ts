@@ -222,6 +222,11 @@ export function renderLongReading(
     /* FOOTER */
     .footer{text-align:center;padding:32px 0 16px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--n500);text-transform:uppercase;letter-spacing:2px}
 
+    /* HIGHLIGHT TOOLBAR */
+    #hl-toolbar{position:fixed;z-index:9999;background:var(--bg);border:1px solid var(--muted);border-radius:999px;padding:6px 10px;display:none;gap:8px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,.18)}
+    .hl-btn{width:22px;height:22px;border-radius:50%;border:2px solid rgba(0,0,0,.18);cursor:pointer;padding:0;transition:transform .12s}
+    .hl-btn:hover{transform:scale(1.25)}
+
     @media(max-width:600px){
       .shell{padding:16px 12px}
       .article-title{font-size:22px}
@@ -267,6 +272,66 @@ export function renderLongReading(
 
     <div class="footer">The IELTS Daily</div>
   </div>
+
+  <div id="hl-toolbar">
+    <button class="hl-btn" data-color="#FEF3C7" style="background:#FEF3C7" title="Amarillo"></button>
+    <button class="hl-btn" data-color="#D1FAE5" style="background:#D1FAE5" title="Verde"></button>
+    <button class="hl-btn" data-color="#FCE7F3" style="background:#FCE7F3" title="Rosa"></button>
+  </div>
+
+  <script>
+(function() {
+  var toolbar = document.getElementById('hl-toolbar');
+  var passage = document.querySelector('.passage');
+  if (!passage || !toolbar) return;
+  var savedRange = null;
+
+  document.addEventListener('mouseup', function() {
+    var sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) { toolbar.style.display = 'none'; return; }
+    var range = sel.getRangeAt(0);
+    if (!passage.contains(range.commonAncestorContainer)) { toolbar.style.display = 'none'; return; }
+    savedRange = range.cloneRange();
+    toolbar.style.display = 'flex';
+    requestAnimationFrame(function() {
+      var rect = range.getBoundingClientRect();
+      var tw = toolbar.offsetWidth;
+      var left = Math.max(4, rect.left + rect.width / 2 - tw / 2);
+      toolbar.style.left = left + 'px';
+      toolbar.style.top = (rect.top + window.scrollY - toolbar.offsetHeight - 8) + 'px';
+    });
+  });
+
+  toolbar.querySelectorAll('.hl-btn').forEach(function(btn) {
+    btn.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      var color = this.getAttribute('data-color');
+      if (!savedRange) return;
+      var span = document.createElement('span');
+      span.style.background = color;
+      span.style.borderRadius = '2px';
+      try { savedRange.surroundContents(span); } catch(err) {}
+      toolbar.style.display = 'none';
+      window.getSelection().removeAllRanges();
+      savedRange = null;
+    });
+  });
+
+  document.addEventListener('mousedown', function(e) {
+    if (!toolbar.contains(e.target)) toolbar.style.display = 'none';
+  });
+
+  passage.addEventListener('click', function(e) {
+    var el = e.target;
+    if (el.tagName === 'SPAN' && el.style.background && el.parentNode) {
+      var parent = el.parentNode;
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
+      parent.normalize();
+    }
+  });
+})();
+</script>
 
   ${submission ? `<script>
 (function() {
