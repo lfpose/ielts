@@ -27,6 +27,8 @@ import {
   gradeWritingMicro,
   gradeMiniWriting,
   gradeWordSearch,
+  gradeHangman,
+  gradeNumberWords,
 } from "../services/grading.js";
 import type {
   LongReadingContent,
@@ -36,6 +38,8 @@ import type {
   WritingMicroContent,
   MiniWritingContent,
   WordSearchContent,
+  HangmanContent,
+  NumberWordsContent,
 } from "../services/content.js";
 import { renderDashboard } from "../templates/dashboard.js";
 import { renderStatsPage } from "../templates/stats.js";
@@ -46,6 +50,8 @@ import { renderFillGap } from "../templates/exercise-fill-gap.js";
 import { renderWritingMicro } from "../templates/exercise-writing.js";
 import { renderMiniWriting } from "../templates/exercise-mini-writing.js";
 import { renderWordSearch } from "../templates/exercise-word-search.js";
+import { renderHangman } from "../templates/exercise-hangman.js";
+import { renderNumberWords } from "../templates/exercise-number-words.js";
 
 const app = new Hono();
 
@@ -62,6 +68,8 @@ const EXERCISE_RENDERERS: Record<ExerciseType, (user: User, exercise: any, submi
   writing_micro: renderWritingMicro,
   mini_writing: renderMiniWriting,
   word_search: renderWordSearch,
+  hangman: renderHangman,
+  number_words: renderNumberWords,
 };
 
 // Student dashboard
@@ -299,6 +307,25 @@ app.post("/:token/exercise/:exerciseId", async (c) => {
         const wsContent = content as WordSearchContent;
         const foundWords = (body.answers?.found_words ?? []) as string[];
         gradeResult = gradeWordSearch(wsContent, { found_words: foundWords });
+        storedAnswers = body.answers;
+        storedFeedback = gradeResult.feedback;
+        break;
+      }
+      case "hangman": {
+        const won = body.answers?.won === true;
+        gradeResult = gradeHangman(content as HangmanContent, { won });
+        storedAnswers = body.answers;
+        storedFeedback = gradeResult.feedback;
+        // Add hangman word to word bank
+        const hContent = content as HangmanContent;
+        addToWordBank(user.id, hContent.word, hContent.definition, hContent.example, exercise.id);
+        break;
+      }
+      case "number_words": {
+        const nwContent = content as NumberWordsContent;
+        const rawAnswers = body.answers as string[] | undefined;
+        const answers = Array.isArray(rawAnswers) ? rawAnswers : [rawAnswers?.["0"] ?? "", rawAnswers?.["1"] ?? "", rawAnswers?.["2"] ?? ""];
+        gradeResult = await gradeNumberWords(nwContent, { answers });
         storedAnswers = body.answers;
         storedFeedback = gradeResult.feedback;
         break;

@@ -322,7 +322,7 @@ export function renderWritingMicro(
       body: JSON.stringify({ answers: { text: textarea.value } })
     })
     .then(function(r) { return r.json(); })
-    .then(function() { stopThinking(); window.location.reload(); })
+    .then(function(d) { stopThinking(); if(d&&d.showEmailPrompt)sessionStorage.setItem('emailPromptPending','1'); window.location.reload(); })
     .catch(function() { stopThinking(); btn.disabled = false; btn.textContent = 'Enviar respuesta'; });
   });
 })();

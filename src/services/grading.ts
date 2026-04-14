@@ -7,6 +7,8 @@ import type {
   WritingMicroContent,
   MiniWritingContent,
   WordSearchContent,
+  HangmanContent,
+  NumberWordsContent,
 } from "./content.js";
 
 const client = new Anthropic();
@@ -38,6 +40,14 @@ export interface MiniWritingAnswers {
 
 export interface WordSearchAnswers {
   found_words: string[];
+}
+
+export interface HangmanAnswers {
+  won: boolean;
+}
+
+export interface NumberWordsAnswers {
+  answers: string[]; // 3 text answers
 }
 
 // =============================================
@@ -115,9 +125,26 @@ export interface WordSearchFeedback {
   results: WordSearchWordResult[];
 }
 
+export interface HangmanFeedback {
+  won: boolean;
+  word: string;
+  definition: string;
+}
+
+export interface NumberWordsItemResult {
+  correct: boolean;
+  userAnswer: string;
+  correctAnswer: string;
+  note?: string;
+}
+
+export interface NumberWordsFeedback {
+  results: NumberWordsItemResult[];
+}
+
 export interface GradeResult {
   score: number;
-  feedback: ReadingFeedback | VocabularyFeedback | FillGapFeedback | WritingFeedback | MiniWritingFeedback | WordSearchFeedback;
+  feedback: ReadingFeedback | VocabularyFeedback | FillGapFeedback | WritingFeedback | MiniWritingFeedback | WordSearchFeedback | HangmanFeedback | NumberWordsFeedback;
 }
 
 // =============================================
@@ -359,6 +386,66 @@ export function gradeWordSearch(
 
   const score = results.filter((r) => r.found).length;
   return { score, feedback: { results } };
+}
+
+// =============================================
+// Deterministic grader (hangman)
+// =============================================
+
+export function gradeHangman(
+  content: HangmanContent,
+  answers: HangmanAnswers
+): GradeResult {
+  const score = answers.won ? 1 : 0;
+  const feedback: HangmanFeedback = {
+    won: answers.won,
+    word: content.word,
+    definition: content.definition,
+  };
+  return { score, feedback };
+}
+
+// =============================================
+// AI grader (number to words)
+// =============================================
+
+export async function gradeNumberWords(
+  content: NumberWordsContent,
+  answers: NumberWordsAnswers
+): Promise<GradeResult> {
+  const itemsText = content.items.map((item, i) =>
+    `Item ${i + 1}: display="${item.display}", canonical answer="${item.answer}", alternatives=${JSON.stringify(item.alternatives)}, student wrote: "${answers.answers[i] ?? ""}"`
+  ).join("\n");
+
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 600,
+    messages: [
+      {
+        role: "user",
+        content: `You are grading a number-to-words exercise for an IELTS English learner.
+For each item, decide if the student's written form is a valid English representation of the number.
+Accept spelling variants (e.g. "eighty-five" = "eighty five"), common alternatives (e.g. "three and a half" = "three point five"), and minor capitalization differences.
+Reject if the number value is wrong or the form is not standard English.
+
+${itemsText}
+
+Return ONLY valid JSON (no markdown, no code fences):
+{
+  "results": [
+    { "correct": true, "userAnswer": "...", "correctAnswer": "...", "note": "optional note" },
+    { "correct": false, "userAnswer": "...", "correctAnswer": "...", "note": "why it's wrong" },
+    { "correct": true, "userAnswer": "...", "correctAnswer": "...", "note": "" }
+  ]
+}`,
+      },
+    ],
+  });
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  const parsed = JSON.parse(text) as { results: NumberWordsItemResult[] };
+  const score = parsed.results.filter(r => r.correct).length;
+  return { score, feedback: { results: parsed.results } };
 }
 
 // =============================================

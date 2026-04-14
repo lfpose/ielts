@@ -256,7 +256,7 @@ export function renderMiniWriting(
       body: JSON.stringify({ answers: { text: input.value } })
     })
     .then(function(r) { return r.json(); })
-    .then(function() { stopThinking(); window.location.reload(); })
+    .then(function(d) { stopThinking(); if(d&&d.showEmailPrompt)sessionStorage.setItem('emailPromptPending','1'); window.location.reload(); })
     .catch(function() { stopThinking(); btn.disabled = false; btn.textContent = 'Enviar oración'; });
   });
 })();

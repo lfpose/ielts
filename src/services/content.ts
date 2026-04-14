@@ -83,6 +83,21 @@ export interface WordSearchContent {
   }>;
 }
 
+export interface HangmanContent {
+  word: string;
+  definition: string;
+  example: string;
+}
+
+export interface NumberWordsContent {
+  items: Array<{
+    display: string;
+    answer: string;
+    alternatives: string[];
+    type: "integer" | "decimal" | "ordinal" | "percentage" | "year";
+  }>;
+}
+
 export interface GeneratedBoard {
   topic: string;
   illustration: string;
@@ -94,6 +109,8 @@ export interface GeneratedBoard {
     { type: "fill_gap"; content: FillGapContent; max_score: 5 },
     { type: "mini_writing"; content: MiniWritingContent; max_score: 1 },
     { type: "writing_micro"; content: WritingMicroContent; max_score: 3 },
+    { type: "hangman"; content: HangmanContent; max_score: 1 },
+    { type: "number_words"; content: NumberWordsContent; max_score: 3 },
   ];
 }
 
@@ -128,13 +145,15 @@ export async function generateBoard(
   // Generate long reading first (vocabulary depends on it)
   const longReading = await generateLongReading(topic, difficulty);
 
-  // Generate in parallel: short reading, vocabulary, writing exercises, word search, image, subheadline
-  const [shortReading, vocabulary, writingMicro, miniWriting, wordSearch, imageUrl, subheadline] = await Promise.all([
+  // Generate in parallel: short reading, vocabulary, writing exercises, word search, hangman, number words, image, subheadline
+  const [shortReading, vocabulary, writingMicro, miniWriting, wordSearch, hangman, numberWords, imageUrl, subheadline] = await Promise.all([
     generateShortReading(topic, difficulty),
     generateVocabulary(longReading),
     generateWritingMicro(topic),
     generateMiniWriting(topic, difficulty),
     generateWordSearch(topic, difficulty),
+    generateHangman(topic, difficulty),
+    generateNumberWords(topic, difficulty),
     fetchTopicImage(topic),
     generateSubheadline(topic),
   ]);
@@ -156,6 +175,8 @@ export async function generateBoard(
       { type: "fill_gap", content: fillGap, max_score: 5 },
       { type: "mini_writing", content: miniWriting, max_score: 1 },
       { type: "writing_micro", content: writingMicro, max_score: 3 },
+      { type: "hangman", content: hangman, max_score: 1 },
+      { type: "number_words", content: numberWords, max_score: 3 },
     ],
   };
 }
@@ -648,4 +669,90 @@ export async function generateSubheadline(topic: string): Promise<string> {
 
   const text = response.content[0].type === "text" ? response.content[0].text : "";
   return text.replace(/^["']|["']$/g, "").trim();
+}
+
+// =============================================
+// Hangman Generator (slot 8)
+// =============================================
+
+export async function generateHangman(topic: string, _difficulty: string): Promise<HangmanContent> {
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 300,
+    messages: [
+      {
+        role: "user",
+        content: `Generate a hangman word for an English learner practicing IELTS vocabulary about "${topic}".
+
+Requirements:
+- Word must be 5-10 letters, NO spaces, only letters
+- Word must be related to "${topic}"
+- Definition: clear, simple, 1 sentence
+- Example: natural sentence using the word
+
+Return ONLY valid JSON:
+{
+  "word": "climate",
+  "definition": "the typical weather conditions in a region over a long period of time",
+  "example": "Scientists are studying how climate change affects polar ice caps."
+}
+
+Important: Return ONLY the JSON object. The word must be exactly 5-10 lowercase letters.`,
+      },
+    ],
+  });
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  const parsed = extractJSON<HangmanContent>(text);
+  // Normalize word to lowercase, letters only
+  parsed.word = parsed.word.toLowerCase().replace(/[^a-z]/g, "");
+  return parsed;
+}
+
+// =============================================
+// Number to Words Generator (slot 9)
+// =============================================
+
+export async function generateNumberWords(topic: string, _difficulty: string): Promise<NumberWordsContent> {
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 600,
+    messages: [
+      {
+        role: "user",
+        content: `Generate 3 number-to-words exercise items for an IELTS Academic Writing Task 1 practice. Numbers should be contextually related to "${topic}" where possible.
+
+Use a mix of types: integer, decimal, ordinal, percentage, year.
+
+Return ONLY valid JSON:
+{
+  "items": [
+    {
+      "display": "85",
+      "answer": "eighty-five",
+      "alternatives": ["eighty five"],
+      "type": "integer"
+    },
+    {
+      "display": "3.5",
+      "answer": "three point five",
+      "alternatives": ["three and a half"],
+      "type": "decimal"
+    },
+    {
+      "display": "1st",
+      "answer": "first",
+      "alternatives": [],
+      "type": "ordinal"
+    }
+  ]
+}
+
+Important: Return ONLY the JSON object. Exactly 3 items. Types: integer, decimal, ordinal, percentage, year.`,
+      },
+    ],
+  });
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  return extractJSON<NumberWordsContent>(text);
 }
