@@ -53,12 +53,15 @@ function findByType(exercises: ExerciseWithStatus[], type: ExerciseType): Exerci
   return exercises.find(e => e.type === type);
 }
 
-function ctaOrScore(ex: ExerciseWithStatus, token: string, ctaText: string): string {
-  const link = `/s/${esc(token)}/exercise/${ex.id}`;
+function exerciseHref(ex: ExerciseWithStatus, token: string): string {
+  return `/s/${esc(token)}/exercise/${ex.id}`;
+}
+
+function ctaBadge(ex: ExerciseWithStatus, ctaText: string): string {
   if (ex.completed) {
-    return `<a href="${link}" class="cta-link done">${ex.user_score}/${ex.max_score} &middot; &#10003; Completado</a>`;
+    return `<span class="cta-badge done">${ex.user_score}/${ex.max_score} &middot; &#10003; Completado</span>`;
   }
-  return `<a href="${link}" class="cta-link">${esc(ctaText)} &rarr;</a>`;
+  return `<span class="cta-badge">${esc(ctaText)} &rarr;</span>`;
 }
 
 function renderArchive(archives: BoardWithStatus[], token: string): string {
@@ -201,10 +204,16 @@ export function renderDashboard(
     .vocab-words{font-family:'Inter',sans-serif;font-size:13px;font-weight:500;font-style:italic;color:var(--n600);margin-bottom:4px}
     .vocab-sub{font-family:'Inter',sans-serif;font-size:12px;color:var(--n500);margin-bottom:8px}
 
-    /* CTA links */
-    .cta-link{font-family:'Inter',sans-serif;font-size:12px;font-weight:600;color:var(--red);text-decoration:none;display:inline-block}
-    .cta-link:hover{text-decoration:underline}
-    .cta-link.done{color:var(--correct)}
+    /* Clickable story blocks */
+    .story-block{display:block;text-decoration:none;color:inherit;padding:10px;margin:-10px;border-radius:2px;transition:background .18s}
+    .story-block:hover{background:rgba(0,0,0,.04)}
+    [data-theme="dark"] .story-block:hover{background:rgba(255,255,255,.05)}
+    @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .story-block:hover{background:rgba(255,255,255,.05)}}
+
+    /* CTA badge (inside story-block / brief-item) */
+    .cta-badge{font-family:'Inter',sans-serif;font-size:12px;font-weight:600;color:var(--red);display:inline-block;margin-top:4px;transition:transform .15s}
+    .cta-badge.done{color:var(--correct)}
+    .story-block:hover .cta-badge:not(.done),.brief-item:hover .cta-badge:not(.done){transform:translateX(3px)}
 
     /* === EN BREVE === */
     .briefs-section{border-top:1px solid var(--muted);padding-top:0;margin-bottom:24px}
@@ -212,7 +221,10 @@ export function renderDashboard(
     .section-label{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:var(--red);white-space:nowrap;font-variant:small-caps}
     .section-rule hr{flex:1;border:none;border-top:1px solid var(--muted)}
     .briefs-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px}
-    .brief-item{padding:0}
+    .brief-item{display:block;text-decoration:none;color:inherit;padding:10px;margin:-10px;border-radius:2px;transition:background .18s}
+    .brief-item:hover{background:rgba(0,0,0,.04)}
+    [data-theme="dark"] .brief-item:hover{background:rgba(255,255,255,.05)}
+    @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .brief-item:hover{background:rgba(255,255,255,.05)}}
     .brief-desc{font-family:'Lora',serif;font-size:13px;color:var(--n500);line-height:1.5;margin-bottom:8px}
 
     /* === ARCHIVE === */
@@ -328,31 +340,39 @@ export function renderDashboard(
           ? `<div class="feature-image" id="feat-img-wrap" data-topic="${esc(todaysBoard.board.topic)}"><img src="${esc(imageUrl)}" alt="${esc(todaysBoard.board.topic)}" crossorigin="anonymous" onerror="var w=document.getElementById('feat-img-wrap');var d=document.createElement('div');d.className='feature-image-placeholder';var s=document.createElement('span');s.textContent=w.dataset.topic;d.appendChild(s);w.parentNode.replaceChild(d,w)"></div>`
           : `<div class="feature-image-placeholder"><span>${esc(todaysBoard?.board.topic || "")}</span></div>`}
         ${longReading ? `
-        <div class="kicker kicker-navy">LECTURA PRINCIPAL</div>
-        <div class="story-title lg">${esc(lrData.title) || "Lectura Principal"}</div>
-        <div class="story-lead">${esc(lrData.excerpt)}</div>
-        ${ctaOrScore(longReading, user.token, "Comenzar lectura")}
+        <a href="${exerciseHref(longReading, user.token)}" class="story-block">
+          <div class="kicker kicker-navy">LECTURA PRINCIPAL</div>
+          <div class="story-title lg">${esc(lrData.title) || "Lectura Principal"}</div>
+          <div class="story-lead">${esc(lrData.excerpt)}</div>
+          ${ctaBadge(longReading, "Comenzar lectura")}
+        </a>
         ` : ""}
       </div>
       <div class="col-secondary">
         ${shortReading ? `
-        <div class="kicker kicker-green">AN&Aacute;LISIS BREVE</div>
-        <div class="story-title md">${esc(srData.title) || "Lectura Corta"}</div>
-        <div class="story-lead">${esc(srData.excerpt)}</div>
-        ${ctaOrScore(shortReading, user.token, "Leer")}
+        <a href="${exerciseHref(shortReading, user.token)}" class="story-block">
+          <div class="kicker kicker-green">AN&Aacute;LISIS BREVE</div>
+          <div class="story-title md">${esc(srData.title) || "Lectura Corta"}</div>
+          <div class="story-lead">${esc(srData.excerpt)}</div>
+          ${ctaBadge(shortReading, "Leer")}
+        </a>
         <hr class="thin-rule">
         ` : ""}
         ${vocabulary ? `
-        <div class="kicker kicker-purple">VOCABULARIO</div>
-        <div class="vocab-words">${esc(vocabData.words.slice(0, 4).join(" \u00b7 "))}${vocabData.words.length > 4 ? " \u2026" : ""}</div>
-        <div class="vocab-sub">Juego de emparejamiento &middot; ${vocabData.words.length} palabras</div>
-        ${ctaOrScore(vocabulary, user.token, "Jugar")}
+        <a href="${exerciseHref(vocabulary, user.token)}" class="story-block">
+          <div class="kicker kicker-purple">VOCABULARIO</div>
+          <div class="vocab-words">${esc(vocabData.words.slice(0, 4).join(" \u00b7 "))}${vocabData.words.length > 4 ? " \u2026" : ""}</div>
+          <div class="vocab-sub">Juego de emparejamiento &middot; ${vocabData.words.length} palabras</div>
+          ${ctaBadge(vocabulary, "Jugar")}
+        </a>
         ` : ""}
         ${wordSearch ? `
         <hr class="thin-rule">
-        <div class="kicker kicker-teal">SOPA DE LETRAS</div>
-        <div class="vocab-sub">4 palabras escondidas</div>
-        ${ctaOrScore(wordSearch, user.token, "Buscar")}
+        <a href="${exerciseHref(wordSearch, user.token)}" class="story-block">
+          <div class="kicker kicker-teal">SOPA DE LETRAS</div>
+          <div class="vocab-sub">4 palabras escondidas</div>
+          ${ctaBadge(wordSearch, "Buscar")}
+        </a>
         ` : ""}
       </div>
     </div>
@@ -361,31 +381,31 @@ export function renderDashboard(
     <div class="briefs-section">
       <div class="section-rule"><span class="section-label">EN BREVE</span><hr></div>
       <div class="briefs-grid">
-        ${fillGap ? `<div class="brief-item">
+        ${fillGap ? `<a href="${exerciseHref(fillGap, user.token)}" class="brief-item">
           <div class="kicker kicker-amber">COMPLETA LOS ESPACIOS</div>
           <div class="brief-desc">Elige las palabras correctas para el p&aacute;rrafo</div>
-          ${ctaOrScore(fillGap, user.token, "Comenzar")}
-        </div>` : `<div></div>`}
-        ${miniWriting ? `<div class="brief-item">
+          ${ctaBadge(fillGap, "Comenzar")}
+        </a>` : `<div></div>`}
+        ${miniWriting ? `<a href="${exerciseHref(miniWriting, user.token)}" class="brief-item">
           <div class="kicker kicker-darkred">UNA FRASE</div>
           <div class="brief-desc">Escribe una oraci&oacute;n sobre el tema</div>
-          ${ctaOrScore(miniWriting, user.token, "Escribir")}
-        </div>` : `<div></div>`}
-        ${writing ? `<div class="brief-item">
+          ${ctaBadge(miniWriting, "Escribir")}
+        </a>` : `<div></div>`}
+        ${writing ? `<a href="${exerciseHref(writing, user.token)}" class="brief-item">
           <div class="kicker kicker-darkred">MICRO ESCRITURA</div>
           <div class="brief-desc">Escribe 2-3 oraciones sobre el tema de hoy</div>
-          ${ctaOrScore(writing, user.token, "Escribir")}
-        </div>` : `<div></div>`}
-        ${hangman ? `<div class="brief-item">
+          ${ctaBadge(writing, "Escribir")}
+        </a>` : `<div></div>`}
+        ${hangman ? `<a href="${exerciseHref(hangman, user.token)}" class="brief-item">
           <div class="kicker kicker-amber">HANGMAN</div>
           <div class="brief-desc">Adivina la palabra letra por letra</div>
-          ${ctaOrScore(hangman, user.token, "Jugar")}
-        </div>` : `<div></div>`}
-        ${numberWords ? `<div class="brief-item">
+          ${ctaBadge(hangman, "Jugar")}
+        </a>` : `<div></div>`}
+        ${numberWords ? `<a href="${exerciseHref(numberWords, user.token)}" class="brief-item">
           <div class="kicker kicker-darkred">N&Uacute;MEROS EN PALABRAS</div>
           <div class="brief-desc">Escribe los n&uacute;meros con letras en ingl&eacute;s</div>
-          ${ctaOrScore(numberWords, user.token, "Comenzar")}
-        </div>` : `<div></div>`}
+          ${ctaBadge(numberWords, "Comenzar")}
+        </a>` : `<div></div>`}
       </div>
     </div>
     ` : `
